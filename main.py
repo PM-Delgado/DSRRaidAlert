@@ -163,21 +163,21 @@ def get_raid_status(time_diff, raid_type):
 def get_raids_list():
     base_raids = [
         {
-            "name": "Pumpkinmon",
+            "name": "🎃 Pumpkinmon",
             "image": get_image_path("Pumpkinmon"),
             "times": ["19:30", "21:30"],
             "type": "daily",
             "map": "Shibuya"
         },
         {
-            "name": "Gotsumon",
+            "name": "🪨 Gotsumon",
             "image": get_image_path("Gotsumon"),
             "times": ["23:00", "01:00"],
             "type": "daily",
             "map": "Shibuya"
         },
         {
-            "name": "BlackSeraphimon",
+            "name": "😈 BlackSeraphimon",
             "image": get_image_path("BlackSeraphimon"),
             "times": ["23:00"],
             "type": "biweekly",
@@ -185,7 +185,7 @@ def get_raids_list():
             "map": "???"
         },
         {
-            "name": "Ophanimon: Falldown Mode",
+            "name": "🪽 Ophanimon: Falldown Mode",
             "image": get_image_path("Ophanimon: Falldown Mode"),
             "times": ["23:00"],
             "type": "biweekly",
@@ -193,7 +193,7 @@ def get_raids_list():
             "map": "???"
         },
         {
-            "name": "Megidramon",
+            "name": "👹 Megidramon",
             "image": get_image_path("Megidramon"),
             "times": ["22:00"],
             "type": "biweekly",
@@ -201,7 +201,7 @@ def get_raids_list():
             "map": "???"
         },
         {
-            "name": "Omnimon",
+            "name": "🤖 Omnimon",
             "image": get_image_path("Omnimon"),
             "times": ["22:00"],
             "type": "biweekly",
@@ -211,7 +211,7 @@ def get_raids_list():
     ]
 
     rotation_raids = [{
-        "name": "Andromon",
+        "name": "🎲 Andromon",
         "image": get_image_path("Andromon"),
         "times": ["19:00"],
         "type": "daily",
@@ -221,13 +221,13 @@ def get_raids_list():
 
     # --- dummies agora simulam raids reais ---
     dummy_raids = [{
-        "name": "🔥 Gotsumon (Dummy)",
+        "name": "🪨 Gotsumon (Dummy)",
         "image": get_image_path("Gotsumon"),
         "type": "dummy",
         "map": "Shibuya",
         "raid_time": get_dummy_raid_time(2, 0)
     }, {
-        "name": "Ophanimon: Falldown Mode",
+        "name": "🪽 Ophanimon: Falldown Mode",
         "image": get_image_path("Ophanimon: Falldown Mode"),
         "type": "dummy",
         "map": "???",
@@ -239,25 +239,25 @@ def get_raids_list():
         "map": "Gear Savannah",
         "raid_time": get_dummy_raid_time(4, 0)
     }, {
-        "name": "🔥 Pumpkinmon (Dummy)",
+        "name": "🎃 Pumpkinmon (Dummy)",
         "image": get_image_path("Pumpkinmon"),
         "type": "dummy",
         "map": "Shibuya",
         "raid_time": get_dummy_raid_time(5, 0)
     }, {
-        "name": "⚡ BlackSeraphimon (Dummy)",
+        "name": "😈 BlackSeraphimon (Dummy)",
         "image": get_image_path("BlackSeraphimon"),
         "type": "dummy",
         "map": "???",
         "raid_time": get_dummy_raid_time(6, 0)
     }, {
-        "name": "💀 Megidramon (Dummy)",
+        "name": "👹 Megidramon (Dummy)",
         "image": get_image_path("Megidramon"),
         "type": "dummy",
         "map": "???",
         "raid_time": get_dummy_raid_time(7, 0)
     }, {
-        "name": "👑 Omnimon (Dummy)",
+        "name": "🤖 Omnimon (Dummy)",
         "image": get_image_path("Omnimon"),
         "type": "dummy",
         "map": "Valley of Darkness",
@@ -314,18 +314,20 @@ def create_embed_content(raid, time_until_raid_seconds):
     brt_time = raid["next_time"].astimezone(BRT)
     minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
 
-    clean_name = raid['name'].replace('🔥 ', '').replace('⚡ ', '').replace(
-        '💀 ', '').replace('👑 ', '')
+    clean_name = raid['name'].replace('🎃 ', '').replace('😈 ', '').replace(
+        '👹 ', '').replace('🤖 ', '').replace('🎲 ',
+                                            '').replace('🪨 ',
+                                                        '').replace('🪽 ', '')
 
     status, color = get_raid_status(time_until_raid_seconds, raid.get("type"))
 
     # Descrição do estado
     if status in ("upcoming", "starting"):
-        desc_status = f"{minutes_until}min"
+        desc_status = f"⏳ Falta {minutes_until}min"
     elif status == "ongoing":
-        desc_status = "⚔️ **Em andamento!**"
+        desc_status = "⚔️ **Raid a decorrer!**"
     else:
-        desc_status = "✅ **Finalizada!**"
+        desc_status = "✅ **Raid finalizada!**"
 
     # Mostrar hora
     if raid.get("type") == "dummy":
@@ -338,17 +340,17 @@ def create_embed_content(raid, time_until_raid_seconds):
         "title":
         f"{clean_name}",
         "fields": [{
-            "name": "📍 **Mapa:**",
-            "value": raid['map'],
-            "inline": True
+            "name": "",
+            "value": f"📍 {raid['map']}",
+            "inline": False
         }, {
-            "name": "⏰ **Horário:**",
-            "value": horario_str,
-            "inline": True
+            "name": "",
+            "value": f"⏰ {horario_str}",
+            "inline": False
         }, {
-            "name": "⏳ **Tempo restante:**",
-            "value": desc_status,
-            "inline": True
+            "name": "",
+            "value": f"{desc_status}",
+            "inline": False
         }],
         "color":
         color,
@@ -378,7 +380,7 @@ def send_webhook_message(raid, time_until_raid_seconds):
     if raid.get("type") == "dummy":
         content = f"**{raid['name'].upper()}** começa em {format_minutos_pt(minutes_until)}!"
     else:
-        content = f"@everyone 🚨 Raid **{raid['name'].upper()}** começa em {format_minutos_pt(minutes_until)}!"
+        content = f"@everyone **{raid['name'].upper()}** começa em {format_minutos_pt(minutes_until)}!"
 
     payload = {"content": content, "embeds": [embed]}
 
@@ -416,18 +418,18 @@ def edit_webhook_message(message_id, raid, time_until_raid_seconds):
 
     if raid.get("type") == "dummy":
         if status in ("upcoming", "starting"):
-            content = f"🚨 **{raid['name'].upper()}** começa em {format_minutos_pt(minutes_until)}!"
+            content = f"**{raid['name'].upper()}** começa em {format_minutos_pt(minutes_until)}!"
         elif status == "ongoing":
-            content = f"⚔️ **{raid['name'].upper()}** está em andamento!"
+            content = f"**{raid['name'].upper()}** está a decorrer!"
         else:
-            content = f"✅ **{raid['name'].upper()}** foi finalizada!"
+            content = f"**{raid['name'].upper()}** foi finalizada!"
     else:
         if status in ("upcoming", "starting"):
-            content = f"🚨 **{raid['name'].upper()}** começa em {format_minutos_pt(minutes_until)}!"
+            content = f"**{raid['name'].upper()}** começa em {format_minutos_pt(minutes_until)}!"
         elif status == "ongoing":
-            content = f"⚔️ **{raid['name'].upper()}** está em andamento!"
+            content = f"**{raid['name'].upper()}** está a decorrer!"
         else:
-            content = f"✅ **{raid['name'].upper()}** foi finalizada!"
+            content = f"**{raid['name'].upper()}** foi finalizada!"
 
     payload = {"content": content, "embeds": [embed]}
     edit_url = f"https://discord.com/api/webhooks/{webhook_id}/{webhook_token}/messages/{message_id}"
