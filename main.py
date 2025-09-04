@@ -9,8 +9,8 @@ from pytz import timezone
 # =============================
 WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK")
 CHECK_INTERVAL = 5  # loop principal a cada 5s
-BASE_ICON_URL = "https://DSR-Raid-Timer.douleurxyz.repl.co/RAlertIcons"
 TEST_DUMMIES_AS_REAL = True
+BASE_ICON_URL = "https://raw.githubusercontent.com/PM-Delgado/DSRRaidAlert/main/RAlertIcons"
 
 custom_icons = {
     "Pumpmon": f"{BASE_ICON_URL}/Pumpmon.png",
@@ -19,6 +19,7 @@ custom_icons = {
     "Ophanimon: Falldown Mode": f"{BASE_ICON_URL}/Ophanimon.png",
     "Megidramon": f"{BASE_ICON_URL}/Megidramon.png",
     "Omegamon": f"{BASE_ICON_URL}/Omegamon.png",
+    "Andromon": f"{BASE_ICON_URL}/Andromon.png"
 }
 
 # Timezones
@@ -33,11 +34,11 @@ sent_messages = {}
 # =============================
 
 
-def get_image_path(name):
-    # Se existir nos icons customizados, usa esse
+def get_image_path(name: str) -> str:
+    # 1. Usa o icon customizado se existir
     if name in custom_icons:
         return custom_icons[name]
-    # Caso contrário, fallback para a wiki oficial
+    # 2. Fallback para a wiki oficial (usa o nome inglês para manter consistência)
     safe_name = name.replace(":", "_")
     return f"https://media.dsrwiki.com/dsrwiki/digimon/{safe_name}/{safe_name}.webp"
 
@@ -165,21 +166,21 @@ def get_raids_list():
     base_raids = [
         {
             "name": "Pumpmon",
-            "image": get_image_path("펌프몬"),
+            "image": get_image_path("Pumpmon"),
             "times": ["19:30", "21:30"],
             "type": "daily",
             "map": "Shibuya"
         },
         {
             "name": "Woodmon",
-            "image": get_image_path("울퉁몬"),
+            "image": get_image_path("Woodmon"),
             "times": ["23:00", "01:00"],
             "type": "daily",
             "map": "Shibuya"
         },
         {
             "name": "BlackSeraphimon",
-            "image": get_image_path("블랙세라피몬"),
+            "image": get_image_path("BlackSeraphimon"),
             "times": ["23:00"],
             "type": "biweekly",
             "baseDate": "2025-05-31",
@@ -187,7 +188,7 @@ def get_raids_list():
         },
         {
             "name": "Ophanimon: Falldown Mode",
-            "image": get_image_path("오파니몬:폴다운모드"),
+            "image": get_image_path("Ophanimon: Falldown Mode"),
             "times": ["23:00"],
             "type": "biweekly",
             "baseDate": "2025-06-07",
@@ -195,7 +196,7 @@ def get_raids_list():
         },
         {
             "name": "Megidramon",
-            "image": get_image_path("메기드라몬"),
+            "image": get_image_path("Megidramon"),
             "times": ["22:00"],
             "type": "biweekly",
             "baseDate": "2025-06-08",
@@ -203,7 +204,7 @@ def get_raids_list():
         },
         {
             "name": "Omegamon",
-            "image": get_image_path("오메가몬"),
+            "image": get_image_path("Omegamon"),
             "times": ["22:00"],
             "type": "biweekly",
             "baseDate": "2025-06-01",
@@ -211,34 +212,42 @@ def get_raids_list():
         },
     ]
 
+    rotation_raids = [{
+        "name": "Andromon",
+        "image": get_image_path("Andromon"),
+        "baseTime": "19:00",
+        "baseDate": "2025-08-28",
+        "map": "Gear Savannah"
+    }]
+
     # --- dummies agora simulam raids reais ---
     dummy_raids = [{
         "name": "🎲 Andromon (Dummy) (Rotation)",
-        "image": get_image_path("안드로몬"),
+        "image": get_image_path("Andromon"),
         "type": "dummy",
         "map": "Gear Savannah",
         "raid_time": get_dummy_raid_time(2, 0)
     }, {
         "name": "🔥 Pumpmon (Dummy)",
-        "image": get_image_path("펌프몬"),
+        "image": get_image_path("Pumpmon"),
         "type": "dummy",
         "map": "Shibuya",
         "raid_time": get_dummy_raid_time(3, 0)
     }, {
         "name": "⚡ BlackSeraphimon (Dummy)",
-        "image": get_image_path("블랙세라피몬"),
+        "image": get_image_path("BlackSeraphimon"),
         "type": "dummy",
         "map": "???",
         "raid_time": get_dummy_raid_time(4, 0)
     }, {
         "name": "💀 Megidramon (Dummy)",
-        "image": get_image_path("메기드라몬"),
+        "image": get_image_path("Megidramon"),
         "type": "dummy",
         "map": "???",
         "raid_time": get_dummy_raid_time(5, 0)
     }, {
         "name": "👑 Omegamon (Dummy)",
-        "image": get_image_path("오메가몬"),
+        "image": get_image_path("Omegamon"),
         "type": "dummy",
         "map": "Valley of Darkness",
         "raid_time": get_dummy_raid_time(6, 0)
