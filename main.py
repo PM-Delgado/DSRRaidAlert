@@ -31,8 +31,11 @@ def fetch_raid_info():
         time_str, map_name = text.split("–", 1)
         map_name = map_name.strip()
         raid_time = datetime.strptime(time_str.strip(), "%H:%M").time()
+    except ValueError as e:
+        print(f"❌ Erro no formato da data/hora: {e} | texto: {text}")
+        return None, None, None
     except Exception as e:
-        print("Parsing falhou:", e, "texto:", text)
+        print(f"❌ Erro no parsing: {e} | texto: {text}")
         return None, None, None
 
     # Criar datetime completo com a próxima ocorrência da hora
@@ -44,9 +47,13 @@ def fetch_raid_info():
 
 
 def send_webhook_alert(map_name, image_url=None, map_url=None):
+    if not WEBHOOK_URL:
+        print("⚠️ Erro: DISCORD_WEBHOOK não está configurado nas variáveis de ambiente")
+        return False
+    
     content = f"@everyone Raid **{map_name}** starting in 10 minutes!"
     payload = {"content": content}
-    embeds = []
+    
     if image_url or map_url:
         embed = {}
         if image_url:
@@ -54,9 +61,20 @@ def send_webhook_alert(map_name, image_url=None, map_url=None):
         if map_url:
             embed["thumbnail"] = {"url": map_url}
         if embed:
-            embeds.append(embed)
-        payload["embeds"] = embeds
-    requests.post(WEBHOOK_URL, json=payload)
+            embeds = [embed]
+            payload["embeds"] = embeds
+    
+    try:
+        response = requests.post(WEBHOOK_URL, json=payload)
+        if response.status_code == 204:
+            print(f"✅ Alerta enviado com sucesso para {map_name}")
+            return True
+        else:
+            print(f"❌ Erro ao enviar webhook: {response.status_code} - {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Erro na requisição webhook: {e}")
+        return False
 
 
 def main():
@@ -81,11 +99,26 @@ def main():
 
 
 if __name__ == "__main__":
-    import requests
-
     def send_test_message():
-        requests.post(WEBHOOK_URL, json={"content": "🚀 Teste bem-sucedido do Replit para o Discord!"})
+        if not WEBHOOK_URL:
+            print("⚠️ DISCORD_WEBHOOK não configurado. Defina a variável de ambiente primeiro.")
+            return False
+        
+        try:
+            response = requests.post(WEBHOOK_URL, json={"content": "🚀 Teste bem-sucedido do Replit para o Discord!"})
+            if response.status_code == 204:
+                print("✅ Mensagem de teste enviada com sucesso!")
+                return True
+            else:
+                print(f"❌ Erro no teste: {response.status_code} - {response.text}")
+                return False
+        except Exception as e:
+            print(f"❌ Erro na mensagem de teste: {e}")
+            return False
 
-    send_test_message()
-
-    main()
+    print("🔍 Iniciando Discord Raid Bot...")
+    if send_test_message():
+        print("🚀 Bot iniciado com sucesso! Monitorando raids...")
+        main()
+    else:
+        print("❌ Configure DISCORD_WEBHOOK antes de continuar.")
