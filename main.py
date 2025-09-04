@@ -13,12 +13,12 @@ TEST_DUMMIES_AS_REAL = True
 BASE_ICON_URL = "https://raw.githubusercontent.com/PM-Delgado/DSRRaidAlert/main/RAlertIcons"
 
 custom_icons = {
-    "Pumpmon": f"{BASE_ICON_URL}/Pumpmon.png",
-    "Woodmon": f"{BASE_ICON_URL}/Woodmon.png",
+    "Pumpkinmon": f"{BASE_ICON_URL}/Pumpkinmon.png",
+    "Gotsumon": f"{BASE_ICON_URL}/Gotsumon.png",
     "BlackSeraphimon": f"{BASE_ICON_URL}/BlackSeraphimon.png",
     "Ophanimon: Falldown Mode": f"{BASE_ICON_URL}/Ophanimon.png",
     "Megidramon": f"{BASE_ICON_URL}/Megidramon.png",
-    "Omegamon": f"{BASE_ICON_URL}/Omegamon.png",
+    "Omnimon": f"{BASE_ICON_URL}/Omnimon.png",
     "Andromon": f"{BASE_ICON_URL}/Andromon.png"
 }
 
@@ -35,12 +35,10 @@ sent_messages = {}
 
 
 def get_image_path(name: str) -> str:
-    # 1. Usa o icon customizado se existir
     if name in custom_icons:
-        return custom_icons[name]
-    # 2. Fallback para a wiki oficial (usa o nome inglês para manter consistência)
+        return f"{custom_icons[name]}?v={int(time.time())}"  # append timestamp
     safe_name = name.replace(":", "_")
-    return f"https://media.dsrwiki.com/dsrwiki/digimon/{safe_name}/{safe_name}.webp"
+    return f"https://media.dsrwiki.com/dsrwiki/digimon/{safe_name}/{safe_name}.webp?v={int(time.time())}"
 
 
 def get_current_kst():
@@ -165,15 +163,15 @@ def get_raid_status(time_diff, raid_type):
 def get_raids_list():
     base_raids = [
         {
-            "name": "Pumpmon",
-            "image": get_image_path("Pumpmon"),
+            "name": "Pumpkinmon",
+            "image": get_image_path("Pumpkinmon"),
             "times": ["19:30", "21:30"],
             "type": "daily",
             "map": "Shibuya"
         },
         {
-            "name": "Woodmon",
-            "image": get_image_path("Woodmon"),
+            "name": "Gotsumon",
+            "image": get_image_path("Gotsumon"),
             "times": ["23:00", "01:00"],
             "type": "daily",
             "map": "Shibuya"
@@ -203,8 +201,8 @@ def get_raids_list():
             "map": "???"
         },
         {
-            "name": "Omegamon",
-            "image": get_image_path("Omegamon"),
+            "name": "Omnimon",
+            "image": get_image_path("Omnimon"),
             "times": ["22:00"],
             "type": "biweekly",
             "baseDate": "2025-06-01",
@@ -223,35 +221,47 @@ def get_raids_list():
 
     # --- dummies agora simulam raids reais ---
     dummy_raids = [{
+        "name": "🔥 Gotsumon (Dummy)",
+        "image": get_image_path("Gotsumon"),
+        "type": "dummy",
+        "map": "Shibuya",
+        "raid_time": get_dummy_raid_time(2, 0)
+    }, {
+        "name": "Ophanimon: Falldown Mode",
+        "image": get_image_path("Ophanimon: Falldown Mode"),
+        "type": "dummy",
+        "map": "???",
+        "raid_time": get_dummy_raid_time(3, 0)
+    }, {
         "name": "🎲 Andromon (Dummy) (Rotation)",
         "image": get_image_path("Andromon"),
         "type": "dummy",
         "map": "Gear Savannah",
-        "raid_time": get_dummy_raid_time(2, 0)
+        "raid_time": get_dummy_raid_time(4, 0)
     }, {
-        "name": "🔥 Pumpmon (Dummy)",
-        "image": get_image_path("Pumpmon"),
+        "name": "🔥 Pumpkinmon (Dummy)",
+        "image": get_image_path("Pumpkinmon"),
         "type": "dummy",
         "map": "Shibuya",
-        "raid_time": get_dummy_raid_time(3, 0)
+        "raid_time": get_dummy_raid_time(5, 0)
     }, {
         "name": "⚡ BlackSeraphimon (Dummy)",
         "image": get_image_path("BlackSeraphimon"),
         "type": "dummy",
         "map": "???",
-        "raid_time": get_dummy_raid_time(4, 0)
+        "raid_time": get_dummy_raid_time(6, 0)
     }, {
         "name": "💀 Megidramon (Dummy)",
         "image": get_image_path("Megidramon"),
         "type": "dummy",
         "map": "???",
-        "raid_time": get_dummy_raid_time(5, 0)
+        "raid_time": get_dummy_raid_time(7, 0)
     }, {
-        "name": "👑 Omegamon (Dummy)",
-        "image": get_image_path("Omegamon"),
+        "name": "👑 Omnimon (Dummy)",
+        "image": get_image_path("Omnimon"),
         "type": "dummy",
         "map": "Valley of Darkness",
-        "raid_time": get_dummy_raid_time(6, 0)
+        "raid_time": get_dummy_raid_time(8, 0)
     }]
 
     return base_raids + rotation_raids + dummy_raids
@@ -311,11 +321,11 @@ def create_embed_content(raid, time_until_raid_seconds):
 
     # Descrição do estado
     if status in ("upcoming", "starting"):
-        desc_status = f"⏳ **Tempo restante:** {minutes_until}min"
+        desc_status = f"{minutes_until}min"
     elif status == "ongoing":
-        desc_status = "⚔️ **Raid em andamento!**"
+        desc_status = "⚔️ **Em andamento!**"
     else:
-        desc_status = "✅ **Raid finalizada!**"
+        desc_status = "✅ **Finalizada!**"
 
     # Mostrar hora
     if raid.get("type") == "dummy":
@@ -325,17 +335,28 @@ def create_embed_content(raid, time_until_raid_seconds):
         horario_str = raid.get("scheduled_time", brt_time.strftime('%H:%M'))
 
     embed = {
-        "title": f"🚨 {clean_name}",
-        "description":
-        f"📍 **Mapa:** {raid['map']}\n⏰ **Horário:** {horario_str}\n{desc_status}",
-        "color": color,
+        "title":
+        f"{clean_name}",
+        "fields": [{
+            "name": "📍 **Mapa:**",
+            "value": raid['map'],
+            "inline": True
+        }, {
+            "name": "⏰ **Horário:**",
+            "value": horario_str,
+            "inline": True
+        }, {
+            "name": "⏳ **Tempo restante:**",
+            "value": desc_status,
+            "inline": True
+        }],
+        "color":
+        color,
         "thumbnail": {
             "url": raid["image"]
         },
         "footer": {
-            "text":
-            "DSR Raid Timer | Teste de Alertas"
-            if raid.get("type") == "dummy" else "DSR Raid Timer"
+            "text": "DSR Raid Alert | Done by tatsuya666"
         },
     }
 
