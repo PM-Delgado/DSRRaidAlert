@@ -1,29 +1,43 @@
 import os
-import math
 import requests
 import time
 from datetime import datetime, timedelta
 from pytz import timezone
 
-# -----------------------
-# Config
-# -----------------------
+# =============================
+# Configurações
+# =============================
 WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK")
-CHECK_INTERVAL = 5  # loop a cada 5s
+CHECK_INTERVAL = 5  # loop principal a cada 5s
+BASE_ICON_URL = "https://DSR-Raid-Timer.douleurxyz.repl.co/RAlertIcons"
+TEST_DUMMIES_AS_REAL = True
+
+custom_icons = {
+    "Pumpmon": f"{BASE_ICON_URL}/Pumpmon.png",
+    "Woodmon": f"{BASE_ICON_URL}/Woodmon.png",
+    "BlackSeraphimon": f"{BASE_ICON_URL}/BlackSeraphimon.png",
+    "Ophanimon: Falldown Mode": f"{BASE_ICON_URL}/Ophanimon.png",
+    "Megidramon": f"{BASE_ICON_URL}/Megidramon.png",
+    "Omegamon": f"{BASE_ICON_URL}/Omegamon.png",
+}
 
 # Timezones
 KST = timezone("Asia/Seoul")
 BRT = timezone("America/Sao_Paulo")
 
 SCRIPT_START_TIME = None
-sent_messages = {
-}  # key -> { message_id, raid_time, last_min, last_status, last_update }
+sent_messages = {}
 
-
-# -----------------------
+# =============================
 # Utilitários
-# -----------------------
+# =============================
+
+
 def get_image_path(name):
+    # Se existir nos icons customizados, usa esse
+    if name in custom_icons:
+        return custom_icons[name]
+    # Caso contrário, fallback para a wiki oficial
     safe_name = name.replace(":", "_")
     return f"https://media.dsrwiki.com/dsrwiki/digimon/{safe_name}/{safe_name}.webp"
 
@@ -55,25 +69,25 @@ def get_next_biweekly_time(time_str, base_date_str):
     return raid_dt
 
 
-def get_aligned_dummy_time(minutes_offset):
-    now = get_current_kst()
-    base = now.replace(second=0, microsecond=0)
-    if now.second > 0:
-        base += timedelta(minutes=1)
-    return base + timedelta(minutes=minutes_offset)
+def get_dummy_raid_time(minutes_offset, seconds_offset=0):
+    global SCRIPT_START_TIME
+    if SCRIPT_START_TIME is None:
+        SCRIPT_START_TIME = get_current_kst()
+        print(
+            f"🚀 Script iniciado em: {SCRIPT_START_TIME.strftime('%H:%M:%S')} KST"
+        )
+    return SCRIPT_START_TIME + timedelta(minutes=minutes_offset,
+                                         seconds=seconds_offset)
 
 
-# Tradução EN -> KR
+# Tradução EN->KR
 map_translation = {
     "Shibuya": "시부야",
     "Valley of Darkness": "어둠성 계곡",
     "Campground": "캠핑장",
     "Subway Station": "지하철 역",
     "???": "???",
-    "🧪 Test Zone Alpha": "시부야",
-    "🧪 Test Zone Beta": "어둠성 계곡",
-    "🧪 Test Zone Gamma": "캠핑장",
-    "🧪 Test Zone Delta": "지하철 역",
+    "Gear Savannah": "기어 사바나"
 }
 
 
@@ -87,34 +101,52 @@ def get_map_image_url(map_name):
     return f"https://media.dsrwiki.com/dsrwiki/map/{safe_name}.webp"
 
 
-# -----------------------
-# Status / cores
-# -----------------------
-def compute_status(time_diff_seconds, is_dummy):
-    td = time_diff_seconds
+def get_remaining_minutes(seconds_total: int) -> int:
+    if seconds_total <= 0:
+        return 0
+    minutes = seconds_total // 60
+    seconds = seconds_total % 60
+    if seconds > 30:
+        minutes += 1
+    return minutes
+
+
+def format_minutos_pt(n: int) -> str:
+    return "1 minuto" if n == 1 else f"{n} minutos"
+
+
+# =============================
+# Estados e cores
+# =============================
+def compute_status(time_diff, is_dummy):
+    minutes_until = get_remaining_minutes(int(time_diff))
+
+    if TEST_DUMMIES_AS_REAL:
+        is_dummy = False
+
     if is_dummy:
-        if td >= 120:
-            return "upcoming"
-        elif 60 <= td < 120:
-            return "starting"
-        elif -59 <= td < 60:
-            return "ongoing"
-        else:
+        if time_diff < -60:  # mais de 1min após o início
             return "finished"
+        elif minutes_until > 1:
+            return "upcoming"
+        elif minutes_until == 1:
+            return "starting"
+        else:  # inclui minutes_until == 0 e até -60s
+            return "ongoing"
     else:
-        if td > 60:
-            return "upcoming"
-        elif 0 <= td <= 60:
-            return "starting"
-        elif -300 <= td < 0:
-            return "ongoing"
-        else:
+        if time_diff < -300:  # mais de 5min após o início
             return "finished"
+        elif minutes_until > 10:
+            return "upcoming"
+        elif 1 <= minutes_until <= 5:
+            return "starting"
+        elif minutes_until == 0 or time_diff >= -300:
+            return "ongoing"
 
 
-def get_raid_status(time_diff_seconds, raid_type):
+def get_raid_status(time_diff, raid_type):
     is_dummy = (raid_type == "dummy")
-    status = compute_status(time_diff_seconds, is_dummy)
+    status = compute_status(time_diff, is_dummy)
     color = {
         "upcoming": 0xFF0000,
         "starting": 0xFFFF00,
@@ -124,9 +156,11 @@ def get_raid_status(time_diff_seconds, raid_type):
     return status, color
 
 
-# -----------------------
-# Raids (reais + dummies)
-# -----------------------
+# =============================
+# Definição das raids
+# =============================
+
+
 def get_raids_list():
     base_raids = [
         {
@@ -177,36 +211,38 @@ def get_raids_list():
         },
     ]
 
-    dummy_raids = [
-        {
-            "name": "🔥 TEST_BOSS_1",
-            "image": get_image_path("오메가몬"),
-            "type": "dummy",
-            "map": "🧪 Test Zone Alpha",
-            "raid_time": get_aligned_dummy_time(2)
-        },
-        {
-            "name": "⚡ TEST_BOSS_2",
-            "image": get_image_path("메기드라몬"),
-            "type": "dummy",
-            "map": "🧪 Test Zone Beta",
-            "raid_time": get_aligned_dummy_time(3)
-        },
-        {
-            "name": "💀 TEST_BOSS_3",
-            "image": get_image_path("블랙세라피몬"),
-            "type": "dummy",
-            "map": "🧪 Test Zone Gamma",
-            "raid_time": get_aligned_dummy_time(4)
-        },
-        {
-            "name": "👑 TEST_BOSS_4",
-            "image": get_image_path("오파니몬:폴다운모드"),
-            "type": "dummy",
-            "map": "🧪 Test Zone Delta",
-            "raid_time": get_aligned_dummy_time(5)
-        },
-    ]
+    # --- dummies agora simulam raids reais ---
+    dummy_raids = [{
+        "name": "🎲 Andromon (Dummy) (Rotation)",
+        "image": get_image_path("안드로몬"),
+        "type": "dummy",
+        "map": "Gear Savannah",
+        "raid_time": get_dummy_raid_time(2, 0)
+    }, {
+        "name": "🔥 Pumpmon (Dummy)",
+        "image": get_image_path("펌프몬"),
+        "type": "dummy",
+        "map": "Shibuya",
+        "raid_time": get_dummy_raid_time(3, 0)
+    }, {
+        "name": "⚡ BlackSeraphimon (Dummy)",
+        "image": get_image_path("블랙세라피몬"),
+        "type": "dummy",
+        "map": "???",
+        "raid_time": get_dummy_raid_time(4, 0)
+    }, {
+        "name": "💀 Megidramon (Dummy)",
+        "image": get_image_path("메기드라몬"),
+        "type": "dummy",
+        "map": "???",
+        "raid_time": get_dummy_raid_time(5, 0)
+    }, {
+        "name": "👑 Omegamon (Dummy)",
+        "image": get_image_path("오메가몬"),
+        "type": "dummy",
+        "map": "Valley of Darkness",
+        "raid_time": get_dummy_raid_time(6, 0)
+    }]
 
     return base_raids + dummy_raids
 
@@ -214,6 +250,7 @@ def get_raids_list():
 def get_upcoming_raids():
     all_raids = []
     raids = get_raids_list()
+
     for raid in raids:
         if raid["type"] == "dummy":
             all_raids.append({
@@ -237,26 +274,32 @@ def get_upcoming_raids():
                     "image": raid["image"],
                     "next_time": next_time,
                     "type": raid["type"],
+                    "scheduled_time": t,
                 })
+
     all_raids.sort(key=lambda r: r["next_time"])
     return all_raids
 
 
-# -----------------------
+# =============================
 # Webhook helpers
-# -----------------------
+# =============================
+
+
 def _webhook_post_url_wait_true():
     return WEBHOOK_URL + ("&" if "?" in WEBHOOK_URL else "?") + "wait=true"
 
 
 def create_embed_content(raid, time_until_raid_seconds):
     brt_time = raid["next_time"].astimezone(BRT)
-    minutes_until = max(0, math.ceil(time_until_raid_seconds / 60.0))
+    minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
 
     clean_name = raid['name'].replace('🔥 ', '').replace('⚡ ', '').replace(
         '💀 ', '').replace('👑 ', '')
+
     status, color = get_raid_status(time_until_raid_seconds, raid.get("type"))
 
+    # Descrição do estado
     if status in ("upcoming", "starting"):
         desc_status = f"⏳ **Tempo restante:** {minutes_until}min"
     elif status == "ongoing":
@@ -264,10 +307,17 @@ def create_embed_content(raid, time_until_raid_seconds):
     else:
         desc_status = "✅ **Raid finalizada!**"
 
+    # Mostrar hora
+    if raid.get("type") == "dummy":
+        horario_str = brt_time.strftime('%H:%M')
+    else:
+        # Usa o horário definido originalmente (sem offsets)
+        horario_str = raid.get("scheduled_time", brt_time.strftime('%H:%M'))
+
     embed = {
         "title": f"🚨 {clean_name}",
         "description":
-        f"📍 **Mapa:** {raid['map']}\\n⏰ **Horário:** {brt_time.strftime('%H:%M')}\\n{desc_status}",
+        f"📍 **Mapa:** {raid['map']}\n⏰ **Horário:** {horario_str}\n{desc_status}",
         "color": color,
         "thumbnail": {
             "url": raid["image"]
@@ -292,12 +342,12 @@ def send_webhook_message(raid, time_until_raid_seconds):
         return False, None
 
     embed = create_embed_content(raid, time_until_raid_seconds)
-    minutes_until = max(0, math.ceil(time_until_raid_seconds / 60.0))
+    minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
 
     if raid.get("type") == "dummy":
-        content = f"🧪 **TESTE DE ALERTA** - {raid['name']} começa em {minutes_until} minutos!"
+        content = f"**{raid['name'].upper()}** começa em {format_minutos_pt(minutes_until)}!"
     else:
-        content = f"@everyone 🚨 Raid **{raid['name']}** começa em {minutes_until} minutos!"
+        content = f"@everyone 🚨 Raid **{raid['name'].upper()}** começa em {format_minutos_pt(minutes_until)}!"
 
     payload = {"content": content, "embeds": [embed]}
 
@@ -331,26 +381,22 @@ def edit_webhook_message(message_id, raid, time_until_raid_seconds):
 
     embed = create_embed_content(raid, time_until_raid_seconds)
     status, _ = get_raid_status(time_until_raid_seconds, raid.get("type"))
-    minutes_until = max(0, math.ceil(time_until_raid_seconds / 60.0))
+    minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
 
     if raid.get("type") == "dummy":
-        if status == "upcoming":
-            content = f"🧪 **TESTE DE ALERTA** - {raid['name']} começa em {minutes_until} minutos!"
-        elif status == "starting":
-            content = f"🧪 **TESTE DE ALERTA** - {raid['name']} começando em 1 minuto!"
+        if status in ("upcoming", "starting"):
+            content = f"🚨 **{raid['name'].upper()}** começa em {format_minutos_pt(minutes_until)}!"
         elif status == "ongoing":
-            content = f"⚔️ {raid['name']} está em andamento!"
+            content = f"⚔️ **{raid['name'].upper()}** está em andamento!"
         else:
-            content = f"✅ {raid['name']} foi finalizada!"
+            content = f"✅ **{raid['name'].upper()}** foi finalizada!"
     else:
-        if status == "upcoming":
-            content = f"@everyone 🚨 Raid **{raid['name']}** começa em {minutes_until} minutos!"
-        elif status == "starting":
-            content = f"@everyone ⚡ Raid **{raid['name']}** começando em 1 minuto!"
+        if status in ("upcoming", "starting"):
+            content = f"🚨 **{raid['name'].upper()}** começa em {format_minutos_pt(minutes_until)}!"
         elif status == "ongoing":
-            content = f"⚔️ Raid **{raid['name']}** está em andamento!"
+            content = f"⚔️ **{raid['name'].upper()}** está em andamento!"
         else:
-            content = f"✅ Raid **{raid['name']}** foi finalizada!"
+            content = f"✅ **{raid['name'].upper()}** foi finalizada!"
 
     payload = {"content": content, "embeds": [embed]}
     edit_url = f"https://discord.com/api/webhooks/{webhook_id}/{webhook_token}/messages/{message_id}"
@@ -358,9 +404,6 @@ def edit_webhook_message(message_id, raid, time_until_raid_seconds):
     try:
         response = requests.patch(edit_url, json=payload)
         if response.status_code == 200:
-            print(
-                f"✏️ Mensagem atualizada para {raid['name']} ({status}, {minutes_until}min)"
-            )
             return True
         else:
             print(
@@ -372,14 +415,12 @@ def edit_webhook_message(message_id, raid, time_until_raid_seconds):
         return False
 
 
-# -----------------------
-# Main loop
-# -----------------------
-def main():
-    if not WEBHOOK_URL:
-        print("❌ Configure DISCORD_WEBHOOK antes de continuar.")
-        return
+# =============================
+# Loop principal
+# =============================
 
+
+def main():
     print("🔍 Iniciando Discord Raid Bot...")
     alerted = set()
 
@@ -389,72 +430,59 @@ def main():
 
         for raid in upcoming_raids:
             time_diff = (raid["next_time"] - now).total_seconds()
+            key = (raid["name"],
+                   raid["next_time"].strftime("%Y-%m-%d %H:%M:%S"))
+
             is_dummy = (raid.get("type") == "dummy")
 
+            # Alertas iniciais
             if is_dummy:
-                key = raid["name"]
+                # Alerta 2min antes
                 if 110 <= time_diff <= 130 and key not in alerted:
                     success, message_id = send_webhook_message(raid, time_diff)
                     if success:
-                        print(
-                            f"📢 Dummy {raid['name']} agendada ({time_diff:.0f}s restantes)"
-                        )
                         alerted.add(key)
-                        last_min = max(0, math.ceil(time_diff / 60.0))
-                        last_status = compute_status(time_diff, True)
                         sent_messages[key] = {
                             'message_id': message_id,
                             'raid_time': raid["next_time"],
-                            'last_min': last_min,
-                            'last_status': last_status,
-                            'last_update': now
+                            'last_update': now,
                         }
             else:
-                key = (raid["name"],
-                       raid["next_time"].strftime("%Y-%m-%d %H:%M:%S"))
+                # Alerta 10min antes
                 if 590 <= time_diff <= 610 and key not in alerted:
                     success, message_id = send_webhook_message(raid, time_diff)
                     if success:
-                        print(
-                            f"📢 Raid real {raid['name']} agendada ({time_diff/60:.1f}min restantes)"
-                        )
                         alerted.add(key)
-                        last_min = max(0, math.ceil(time_diff / 60.0))
-                        last_status = compute_status(time_diff, False)
                         sent_messages[key] = {
                             'message_id': message_id,
                             'raid_time': raid["next_time"],
-                            'last_min': last_min,
-                            'last_status': last_status,
-                            'last_update': now
+                            'last_update': now,
                         }
 
-        for key, data in list(sent_messages.items()):
-            message_id = data['message_id']
-            raid_time = data['raid_time']
-            raid_name = key if isinstance(key, str) else key[0]
-            raid = next((r for r in upcoming_raids if r["name"] == raid_name),
-                        None)
-            if not raid:
-                continue
+            # Atualizações posteriores
+            if key in sent_messages:
+                message_data = sent_messages[key]
+                status, _ = get_raid_status(time_diff, raid.get("type"))
 
-            time_diff = (raid["next_time"] - now).total_seconds()
-            is_dummy = (raid.get("type") == "dummy")
-            current_status = compute_status(time_diff, is_dummy)
-            current_min = max(0, math.ceil(time_diff / 60.0))
+                # Continuar a editar até garantir que chegou a "finished"
+                still_relevant = True
+                if status == "finished":
+                    # ainda permite edições até 10min depois só para garantir a transição
+                    still_relevant = (
+                        now -
+                        message_data['last_update']).total_seconds() < 600
 
-            if current_min != data.get(
-                    'last_min') or current_status != data.get('last_status'):
-                if edit_webhook_message(message_id, raid, time_diff):
-                    print(
-                        f"🔄 Update {raid_name}: {current_status}, {current_min}min restantes"
-                    )
-                    sent_messages[key]['last_min'] = current_min
-                    sent_messages[key]['last_status'] = current_status
-                    sent_messages[key]['last_update'] = now
+                if still_relevant and (now - message_data['last_update']
+                                       ).total_seconds() >= 60:
+                    if edit_webhook_message(message_data['message_id'], raid,
+                                            time_diff):
+                        sent_messages[key]['last_update'] = now
 
         time.sleep(CHECK_INTERVAL)
 
 
 if __name__ == "__main__":
-    main()
+    if WEBHOOK_URL:
+        main()
+    else:
+        print("❌ Configure DISCORD_WEBHOOK antes de continuar.")
