@@ -215,7 +215,8 @@ def get_raids_list():
     rotation_raids = [{
         "name": "Andromon",
         "image": get_image_path("Andromon"),
-        "baseTime": "19:00",
+        "times": ["19:00"],
+        "type": "daily",
         "baseDate": "2025-08-28",
         "map": "Gear Savannah"
     }]
@@ -253,7 +254,7 @@ def get_raids_list():
         "raid_time": get_dummy_raid_time(6, 0)
     }]
 
-    return base_raids + dummy_raids
+    return base_raids + rotation_raids + dummy_raids
 
 
 def get_upcoming_raids():
