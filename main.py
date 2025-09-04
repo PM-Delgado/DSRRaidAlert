@@ -11,6 +11,7 @@ WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK")
 CHECK_INTERVAL = 5  # loop principal a cada 5s
 TEST_DUMMIES_AS_REAL = True
 BASE_ICON_URL = "https://raw.githubusercontent.com/PM-Delgado/DSRRaidAlert/main/RAlertIcons"
+BASE_MAP_URL = "https://raw.githubusercontent.com/PM-Delgado/DSRRaidAlert/main/RAlertMaps"
 
 custom_icons = {
     "Pumpkinmon": f"{BASE_ICON_URL}/Pumpkinmon.png",
@@ -20,6 +21,16 @@ custom_icons = {
     "Megidramon": f"{BASE_ICON_URL}/Megidramon.png",
     "Omnimon": f"{BASE_ICON_URL}/Omnimon.png",
     "Andromon": f"{BASE_ICON_URL}/Andromon.png"
+}
+
+custom_maps = {
+    "Pumpkinmon": f"{BASE_MAP_URL}/Pumpkinmon_map.jpg",
+    "Gotsumon": f"{BASE_MAP_URL}/Gotsumon_map.jpg",
+    "BlackSeraphimon": f"{BASE_MAP_URL}/BlackSeraphimon_map.jpg",
+    "Ophanimon: Falldown Mode": f"{BASE_MAP_URL}/Ophanimon_map.jpg",
+    "Megidramon": f"{BASE_MAP_URL}/Megidramon_map.jpg",
+    "Omnimon": f"{BASE_MAP_URL}/Omnimon_map.jpg",
+    "Andromon": f"{BASE_MAP_URL}/Andromon_map.jpg"
 }
 
 # Timezones
@@ -90,7 +101,12 @@ map_translation = {
 }
 
 
-def get_map_image_url(map_name):
+def get_map_image_url(map_name, boss_name=None):
+    # tenta primeiro buscar pela tabela custom
+    if boss_name and boss_name in custom_maps:
+        return f"{custom_maps[boss_name]}?v={int(time.time())}"
+
+    # fallback para Wiki (caso não exista no custom_maps)
     kr_name = map_translation.get(map_name)
     if not kr_name:
         return None
@@ -362,7 +378,13 @@ def create_embed_content(raid, time_until_raid_seconds):
         },
     }
 
-    map_image_url = get_map_image_url(raid['map'])
+    map_image_url = get_map_image_url(
+        raid['map'], raid['name'].replace('🎃 ', '').replace('😈 ', '').replace(
+            '👹 ', '').replace('🤖 ',
+                              '').replace('🎲 ',
+                                          '').replace('🪨 ',
+                                                      '').replace('🪽 ', ''))
+
     if map_image_url:
         embed["image"] = {"url": map_image_url}
 
