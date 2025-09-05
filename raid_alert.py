@@ -412,7 +412,7 @@ def get_upcoming_raids():
     global DUMMY_RAID_TIMES
     if DUMMY_RAID_TIMES is None:
         now_kst = get_current_kst()
-        DUMMY_RAID_TIMES = [now_kst + timedelta(minutes=10), now_kst + timedelta(minutes=15)]
+        DUMMY_RAID_TIMES = [now_kst + timedelta(minutes=1), now_kst + timedelta(minutes=2)]
         DUMMY_RAID_TIMES = [KST.localize(dt.replace(tzinfo=None)) if dt.tzinfo is None else dt for dt in DUMMY_RAID_TIMES]
     dummy_names = ["🎲 Andromon (Dummy)", "🪨 Gotsumon (Dummy)"]
     dummy_maps = ["Shibuya", "Shibuya"]
