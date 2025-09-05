@@ -101,19 +101,30 @@ map_translation = {
 }
 
 
-def get_map_image_url(map_name, boss_name=None):
-    # tenta primeiro buscar pela tabela custom
-    if boss_name and boss_name in custom_maps:
-        return f"{custom_maps[boss_name]}?v={int(time.time())}"
+def clean_boss_name(raw_name: str) -> str:
+    # remove emojis e textos extras tipo (Dummy)
+    clean = (raw_name.replace('🎃 ', '').replace('😈 ', '').replace(
+        '👹 ', '').replace('🤖 ',
+                          '').replace('🎲 ', '').replace('🪨 ', '').replace(
+                              '🪽 ', '').replace('(Dummy)', '').strip())
+    return clean
 
-    # fallback para Wiki (caso não exista no custom_maps)
+
+def get_map_image_url(map_name, boss_name=None):
+    clean_name = clean_boss_name(boss_name) if boss_name else None
+
+    if clean_name and clean_name in custom_maps:
+        # já devolve com timestamp
+        return f"{custom_maps[clean_name]}?v={int(time.time())}"
+
+    # fallback para Wiki
     kr_name = map_translation.get(map_name)
     if not kr_name:
         return None
     if kr_name == "???":
-        return "https://media.dsrwiki.com/dsrwiki/map/ApocalymonArea.webp"
+        return f"https://media.dsrwiki.com/dsrwiki/map/ApocalymonArea.webp?v={int(time.time())}"
     safe_name = "".join(kr_name.split())
-    return f"https://media.dsrwiki.com/dsrwiki/map/{safe_name}.webp"
+    return f"https://media.dsrwiki.com/dsrwiki/map/{safe_name}.webp?v={int(time.time())}"
 
 
 def get_remaining_minutes(seconds_total: int) -> int:
@@ -136,27 +147,14 @@ def format_minutos_pt(n: int) -> str:
 def compute_status(time_diff, is_dummy):
     minutes_until = get_remaining_minutes(int(time_diff))
 
-    if TEST_DUMMIES_AS_REAL:
-        is_dummy = False
-
-    if is_dummy:
-        if time_diff < -60:  # mais de 1min após o início
-            return "finished"
-        elif minutes_until > 1:
-            return "upcoming"
-        elif minutes_until == 1:
-            return "starting"
-        else:  # inclui minutes_until == 0 e até -60s
-            return "ongoing"
-    else:
-        if time_diff < -300:  # mais de 5min após o início
-            return "finished"
-        elif minutes_until > 10:
-            return "upcoming"
-        elif 1 <= minutes_until <= 5:
-            return "starting"
-        elif minutes_until == 0 or time_diff >= -300:
-            return "ongoing"
+    if time_diff < -300:  # mais de 5min após o início
+        return "finished"
+    elif minutes_until > 5:
+        return "upcoming"
+    elif 1 <= minutes_until <= 5:
+        return "starting"
+    elif minutes_until == 0 or time_diff >= -300:
+        return "ongoing"
 
 
 def get_raid_status(time_diff, raid_type):
@@ -241,43 +239,43 @@ def get_raids_list():
         "image": get_image_path("Gotsumon"),
         "type": "dummy",
         "map": "Shibuya",
-        "raid_time": get_dummy_raid_time(2, 0)
+        "raid_time": get_dummy_raid_time(10, 0)
     }, {
-        "name": "🪽 Ophanimon: Falldown Mode",
+        "name": "🪽 Ophanimon: Falldown Mode (Dummy)",
         "image": get_image_path("Ophanimon: Falldown Mode"),
         "type": "dummy",
         "map": "???",
-        "raid_time": get_dummy_raid_time(3, 0)
+        "raid_time": get_dummy_raid_time(11, 0)
     }, {
-        "name": "🎲 Andromon (Dummy) (Rotation)",
+        "name": "🎲 Andromon (Dummy)",
         "image": get_image_path("Andromon"),
         "type": "dummy",
         "map": "Gear Savannah",
-        "raid_time": get_dummy_raid_time(4, 0)
+        "raid_time": get_dummy_raid_time(12, 0)
     }, {
         "name": "🎃 Pumpkinmon (Dummy)",
         "image": get_image_path("Pumpkinmon"),
         "type": "dummy",
         "map": "Shibuya",
-        "raid_time": get_dummy_raid_time(5, 0)
+        "raid_time": get_dummy_raid_time(13, 0)
     }, {
         "name": "😈 BlackSeraphimon (Dummy)",
         "image": get_image_path("BlackSeraphimon"),
         "type": "dummy",
         "map": "???",
-        "raid_time": get_dummy_raid_time(6, 0)
+        "raid_time": get_dummy_raid_time(14, 0)
     }, {
         "name": "👹 Megidramon (Dummy)",
         "image": get_image_path("Megidramon"),
         "type": "dummy",
         "map": "???",
-        "raid_time": get_dummy_raid_time(7, 0)
+        "raid_time": get_dummy_raid_time(15, 0)
     }, {
         "name": "🤖 Omnimon (Dummy)",
         "image": get_image_path("Omnimon"),
         "type": "dummy",
         "map": "Valley of Darkness",
-        "raid_time": get_dummy_raid_time(8, 0)
+        "raid_time": get_dummy_raid_time(16, 0)
     }]
 
     return base_raids + rotation_raids + dummy_raids
@@ -493,7 +491,7 @@ def main():
             # Alertas iniciais
             if is_dummy:
                 # Alerta 2min antes
-                if 110 <= time_diff <= 130 and key not in alerted:
+                if 590 <= time_diff <= 610 and key not in alerted:
                     success, message_id = send_webhook_message(raid, time_diff)
                     if success:
                         alerted.add(key)
