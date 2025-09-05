@@ -291,14 +291,6 @@ def edit_webhook_message(message_id, raid, time_until_raid_seconds, embed):
     except Exception:
         print("❌ Erro ao extrair webhook ID e token")
         return False, None
-    
-    if status in ("upcoming", "starting"):
-                content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** Começa em {format_minutos_pt(minutes_until)}!"
-    elif status == "ongoing":
-                content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | {ongoing_str}!"
-    else:
-                content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | Raid finalizada!"
-
     embed, status = update_embed_fields(embed, raid, time_until_raid_seconds)
     minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
     if status == "ongoing":
