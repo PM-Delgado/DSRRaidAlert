@@ -279,10 +279,10 @@ def send_webhook_message(raid, time_until_raid_seconds):
             return True, message_id, embed
         else:
             print(
-                f"❌ Erro no webhook: {response.status_code} - {response.text}")
+                f"Error in webhook: {response.status_code} - {response.text}")
             return False, None, None
     except Exception as e:
-        print(f"❌ Erro na requisição: {e}")
+        print(f"Error in request: {e}")
         return False, None, None
 
 def edit_webhook_message(message_id, raid, time_until_raid_seconds, embed):
@@ -294,7 +294,7 @@ def edit_webhook_message(message_id, raid, time_until_raid_seconds, embed):
         webhook_id = webhook_parts[0]
         webhook_token = webhook_parts[1]
     except Exception:
-        print("❌ Erro ao extrair webhook ID e token")
+        print("Error extracting webhook ID and token")
         return False, None
     embed, status = update_embed_fields(embed, raid, time_until_raid_seconds)
     # Production log: log every embed update
@@ -318,11 +318,11 @@ def edit_webhook_message(message_id, raid, time_until_raid_seconds, embed):
             return True, status
         else:
             print(
-                f"❌ Erro ao editar mensagem: {response.status_code} - {response.text}"
+                f"Error editing message: {response.status_code} - {response.text}"
             )
             return False, status
     except Exception as e:
-        print(f"❌ Erro na edição: {e}")
+        print(f"Error in editing webhook message: {e}")
         return False, status
 
 ###########################################################
@@ -361,7 +361,7 @@ def get_upcoming_raids():
 def main():
     global last_cleanup_time
     last_summary_log = None
-    print("🔍 Iniciando Discord Raid Bot...")
+    print("Starting DSRRaidAlert...")
     while True:
         now_kst = get_current_kst()  # Always use KST for calculations
         upcoming_raids = get_upcoming_raids()
@@ -384,10 +384,16 @@ def main():
             print(f"[CLEANUP] Cleaned up completed_raids: {before} -> {after}")
             last_cleanup_time = now_kst
 
-        # Log a summary of scheduled raids every hour
+        # Log a summary of scheduled raids every hour as a table
         if last_summary_log is None or (now_kst - last_summary_log).total_seconds() >= 3600:
-            summary = [f"{r['name']} at {r['next_time'].strftime('%Y-%m-%d %H:%M:%S %Z')}" for r in upcoming_raids]
-            print(f"[SUMMARY] Scheduled raids: {', '.join(summary)}")
+            print("[SUMMARY] Scheduled raids:")
+            print("+----------------------+---------------------+----------------------+\n| Raid Name            | Scheduled Time       | Map                  |\n+----------------------+---------------------+----------------------+")
+            for r in upcoming_raids:
+                name = r['name'][:20].ljust(20)
+                sched = r['next_time'].strftime('%Y-%m-%d %H:%M').ljust(19)
+                mapn = r['map'][:20].ljust(20)
+                print(f"| {name} | {sched} | {mapn} |")
+            print("+----------------------+---------------------+----------------------+")
             last_summary_log = now_kst
 
         for raid in upcoming_raids:
@@ -426,4 +432,4 @@ if __name__ == "__main__":
     if WEBHOOK_URL:
         main()
     else:
-        print("❌ Configure DISCORD_WEBHOOK antes de continuar.")
+        print("Config DISCORD_WEBHOOK before continuing.")
