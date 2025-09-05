@@ -449,7 +449,6 @@ def get_upcoming_raids():
 
 def main():
     print("🔍 Iniciando Discord Raid Bot...")
-    alerted = set()
     while True:
         now_kst = get_current_kst()  # Always use KST for calculations
         upcoming_raids = get_upcoming_raids()
@@ -459,11 +458,10 @@ def main():
             time_diff = (raid["next_time"] - now_kst).total_seconds()
             key = (raid["name"], raid["next_time"].strftime("%Y-%m-%d %H:%M:%S"))
 
-            # Alert 2 minutes before spawn (120s window)
-            if 590 <= time_diff <= 610 and key not in alerted:
+            # Alert exactly at or after threshold (10min = 600s)
+            if time_diff <= 600 and key not in sent_messages:
                 success, message_id, embed = send_webhook_message(raid, time_diff)
                 if success:
-                    alerted.add(key)
                     sent_messages[key] = {
                         'message_id': message_id,
                         'raid_time': raid["next_time"],
