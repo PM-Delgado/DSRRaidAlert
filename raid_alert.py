@@ -188,7 +188,7 @@ def create_embed_content(raid, time_until_raid_seconds):
     status, color = get_raid_status(time_until_raid_seconds, raid.get("type"))
 
     if status in ("upcoming", "starting"):
-        desc_status = f"⏳ Falta {format_minutos_pt(minutes_until)}"
+        desc_status = f"⏳ Em {format_minutos_pt(minutes_until)}"
     elif status == "ongoing":
         # Calculate minutes since raid started
         minutes_ongoing = max(0, int((-time_until_raid_seconds) // 60))
@@ -223,7 +223,7 @@ def update_embed_fields(embed, raid, time_until_raid_seconds):
     minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
     embed["color"] = color
     if status in ("upcoming", "starting"):
-        desc_status = f"⏳ Falta {format_minutos_pt(minutes_until)}"
+        desc_status = f"⏳ Em {format_minutos_pt(minutes_until)}"
     elif status == "ongoing":
         minutes_ongoing = max(0, int((-time_until_raid_seconds) // 60))
         desc_status = f"⚔️ **Começou há {format_minutos_pt(minutes_ongoing)}**"
