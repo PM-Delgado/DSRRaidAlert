@@ -16,6 +16,8 @@ ROLE_TAG = f"<@&{ROLE_ID}>"
 # Timezones
 KST = timezone("Asia/Seoul")
 BRT = timezone("America/Sao_Paulo")
+# Add Portugal timezone for logging
+LISBON = timezone("Europe/Lisbon")
 SCRIPT_START_TIME = None
 sent_messages = {}
 # Track finished raids to prevent duplicate alerts
@@ -115,6 +117,10 @@ def get_image_path(name: str) -> str:
 
 def get_current_kst():
     return datetime.now(KST)
+
+def get_log_time():
+    # Returns current time in Portugal timezone as string
+    return datetime.now(LISBON).strftime("%Y-%m-%d %H:%M:%S")
 
 def get_next_daily_time(time_str):
     now = get_current_kst()
@@ -251,9 +257,8 @@ def send_webhook_message(raid, time_until_raid_seconds):
     if not WEBHOOK_URL:
         print("⚠️ Erro: DISCORD_WEBHOOK não está configurado")
         return False, None, None
-
     # Production log: log every alert sent
-    print(f"[ALERT] Sent alert for {raid['name']} scheduled at {raid['next_time'].strftime('%Y-%m-%d %H:%M:%S %Z')} | Status: {get_raid_status(time_until_raid_seconds, raid.get('type'))[0]}")
+    print(f"[{get_log_time()}] [ALERT] Sent alert for {raid['name']} scheduled at {raid['next_time'].strftime('%Y-%m-%d %H:%M:%S %Z')} | Status: {get_raid_status(time_until_raid_seconds, raid.get('type'))[0]}")
 
     embed = create_embed_content(raid, time_until_raid_seconds)
     minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
@@ -298,7 +303,7 @@ def edit_webhook_message(message_id, raid, time_until_raid_seconds, embed):
         return False, None
     embed, status = update_embed_fields(embed, raid, time_until_raid_seconds)
     # Production log: log every embed update
-    print(f"[UPDATE] Updated alert for {raid['name']} scheduled at {raid['next_time'].strftime('%Y-%m-%d %H:%M:%S %Z')} | Status: {status}")
+    print(f"[{get_log_time()}] [UPDATE] Updated alert for {raid['name']} scheduled at {raid['next_time'].strftime('%Y-%m-%d %H:%M:%S %Z')} | Status: {status}")
     minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
     if status == "ongoing":
         minutes_ongoing = max(0, int((-time_until_raid_seconds) // 60))
@@ -361,7 +366,7 @@ def get_upcoming_raids():
 def main():
     global last_cleanup_time
     last_summary_log = None
-    print("Starting DSRRaidAlert...")
+    print(f"[{get_log_time()}] Starting DSRRaidAlert...")
     while True:
         now_kst = get_current_kst()  # Always use KST for calculations
         upcoming_raids = get_upcoming_raids()
@@ -381,12 +386,12 @@ def main():
                 except Exception:
                     continue
             after = len(completed_raids)
-            print(f"[CLEANUP] Cleaned up completed_raids: {before} -> {after}")
+            print(f"[{get_log_time()}] [CLEANUP] Cleaned up completed_raids: {before} -> {after}")
             last_cleanup_time = now_kst
 
         # Log a summary of scheduled raids every hour as a table
         if last_summary_log is None or (now_kst - last_summary_log).total_seconds() >= 3600:
-            print("[SUMMARY] Scheduled raids:")
+            print(f"[{get_log_time()}] [SUMMARY] Scheduled raids:")
             print("+----------------------+---------------------+----------------------+\n| Raid Name            | Scheduled Time       | Map                  |\n+----------------------+---------------------+----------------------+")
             for r in upcoming_raids:
                 name = r['name'][:20].ljust(20)
@@ -422,7 +427,7 @@ def main():
                     if success:
                         sent_messages[key]['last_update'] = now_kst
                         if status == "finished":
-                            print(f"[INFO] Raid {raid['name']} finished. Removing from sent_messages and adding to completed_raids.")
+                            print(f"[{get_log_time()}] [INFO] Raid {raid['name']} finished. Removing from sent_messages and adding to completed_raids.")
                             del sent_messages[key]
                             completed_raids.add(key)
 
