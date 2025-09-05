@@ -9,7 +9,6 @@ from pytz import timezone
 ###########################################################
 WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK")
 CHECK_INTERVAL = 5  # main loop interval in seconds
-TEST_DUMMIES_AS_REAL = True
 BASE_ICON_URL = os.getenv("DSR_RAID_ALERT_ICONS")
 BASE_MAP_URL = os.getenv("DSR_RAID_ALERT_MAPS")
 ROLE_ID = os.getenv("DISCORD_ROLE_ID")
@@ -24,8 +23,6 @@ completed_raids = set()
 # For periodic cleanup of completed_raids
 COMPLETED_RAIDS_CLEANUP_INTERVAL = 7 * 24 * 60 * 60  # 7 days in seconds
 last_cleanup_time = None
-# Dummy raid times (initialized at script start)
-DUMMY_RAID_TIMES = None
 
 custom_icons = {
     "Pumpkinmon": f"{BASE_ICON_URL}/Pumpkinmon.png",
@@ -138,16 +135,6 @@ def get_next_biweekly_time(time_str, base_date_str):
     if raid_dt <= now:
         raid_dt += timedelta(days=14)
     return raid_dt
-
-def get_dummy_raid_time(minutes_offset, seconds_offset=0):
-    global SCRIPT_START_TIME
-    if SCRIPT_START_TIME is None:
-        SCRIPT_START_TIME = get_current_kst()
-        print(
-            f"🚀 Script iniciado em: {SCRIPT_START_TIME.strftime('%H:%M:%S')} KST"
-        )
-    return SCRIPT_START_TIME + timedelta(minutes=minutes_offset,
-                                         seconds=seconds_offset)
 
 def clean_boss_name(raw_name: str) -> str:
     clean = (raw_name.replace('🎃 ', '').replace('😈 ', '').replace(
@@ -265,7 +252,8 @@ def send_webhook_message(raid, time_until_raid_seconds):
         print("⚠️ Erro: DISCORD_WEBHOOK não está configurado")
         return False, None, None
 
-    print(f"[DEBUG] send_webhook_message called for {raid['name']} | time_until_raid_seconds: {int(time_until_raid_seconds)}")
+    # Production log: log every alert sent
+    print(f"[ALERT] Sent alert for {raid['name']} scheduled at {raid['next_time'].strftime('%Y-%m-%d %H:%M:%S %Z')} | Status: {get_raid_status(time_until_raid_seconds, raid.get('type'))[0]}")
 
     embed = create_embed_content(raid, time_until_raid_seconds)
     minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
@@ -275,20 +263,12 @@ def send_webhook_message(raid, time_until_raid_seconds):
     if status == "ongoing":
         minutes_ongoing = max(0, int((-time_until_raid_seconds) // 60))
         ongoing_str = f"Começou há {format_minutos_pt(minutes_ongoing)}"
-    if raid.get("type") == "dummy":
-        if status in ("upcoming", "starting"):
-            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | Começa em {format_minutos_pt(minutes_until)}!"
-        elif status == "ongoing":
-            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | {ongoing_str}!"
-        else:
-            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | Raid finalizada!"
+    if status in ("upcoming", "starting"):
+        content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | Começa em {format_minutos_pt(minutes_until)}!"
+    elif status == "ongoing":
+        content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | {ongoing_str}!"
     else:
-        if status in ("upcoming", "starting"):
-            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | Começa em {format_minutos_pt(minutes_until)}!"
-        elif status == "ongoing":
-            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | {ongoing_str}!"
-        else:
-            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | Raid finalizada!"
+        content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | Raid finalizada!"
 
     payload = {"content": content, "embeds": [embed]}
     try:
@@ -296,7 +276,6 @@ def send_webhook_message(raid, time_until_raid_seconds):
         if response.status_code == 200:
             data = response.json()
             message_id = data.get('id')
-            print(f"✅ Mensagem enviada para {raid['name']} (ID: {message_id})")
             return True, message_id, embed
         else:
             print(
@@ -318,24 +297,18 @@ def edit_webhook_message(message_id, raid, time_until_raid_seconds, embed):
         print("❌ Erro ao extrair webhook ID e token")
         return False, None
     embed, status = update_embed_fields(embed, raid, time_until_raid_seconds)
+    # Production log: log every embed update
+    print(f"[UPDATE] Updated alert for {raid['name']} scheduled at {raid['next_time'].strftime('%Y-%m-%d %H:%M:%S %Z')} | Status: {status}")
     minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
     if status == "ongoing":
         minutes_ongoing = max(0, int((-time_until_raid_seconds) // 60))
         ongoing_str = f"Começou há {format_minutos_pt(minutes_ongoing)}"
-    if raid.get("type") == "dummy":
-        if status in ("upcoming", "starting"):
-            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | Começa em {format_minutos_pt(minutes_until)}!"
-        elif status == "ongoing":
-            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | {ongoing_str}!"
-        else:
-            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | Raid finalizada!"
+    if status in ("upcoming", "starting"):
+        content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | Começa em {format_minutos_pt(minutes_until)}!"
+    elif status == "ongoing":
+        content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | {ongoing_str}!"
     else:
-        if status in ("upcoming", "starting"):
-            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | Começa em {format_minutos_pt(minutes_until)}!"
-        elif status == "ongoing":
-            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | {ongoing_str}!"
-        else:
-            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | Raid finalizada!"
+        content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | Raid finalizada!"
 
     payload = {"content": content, "embeds": [embed]}
     edit_url = f"https://discord.com/api/webhooks/{webhook_id}/{webhook_token}/messages/{message_id}"
@@ -359,20 +332,17 @@ def edit_webhook_message(message_id, raid, time_until_raid_seconds, embed):
 #            "biweekly" -> uses get_next_biweekly_time + base_date (YYYY-MM-DD)
 def get_upcoming_raids():
     raids = []
-
     for cfg in REAL_RAIDS:
         name = cfg["name"]
         map_name = cfg["map"]
         freq = cfg.get("frequency", "daily")
         times = cfg.get("times", [])
         base_date = cfg.get("base_date")
-
         for t in times:
             if freq == "biweekly":
                 next_time_dt = get_next_biweekly_time(t, base_date)
             else:
                 next_time_dt = get_next_daily_time(t)
-
             raids.append({
                 "name": name,
                 "map": map_name,
@@ -381,26 +351,6 @@ def get_upcoming_raids():
                 "scheduled_time": t,
                 "image": get_image_path(clean_boss_name(name)),
             })
-
-
-    # Dummy raids for testing (remove/comment out for production)
-    global DUMMY_RAID_TIMES
-    if DUMMY_RAID_TIMES is None:
-        now_kst = get_current_kst()
-        DUMMY_RAID_TIMES = [now_kst + timedelta(minutes=1), now_kst + timedelta(minutes=2)]
-        DUMMY_RAID_TIMES = [KST.localize(dt.replace(tzinfo=None)) if dt.tzinfo is None else dt for dt in DUMMY_RAID_TIMES]
-    dummy_names = ["🎲 Andromon (Dummy)", "🪨 Gotsumon (Dummy)"]
-    dummy_maps = ["Shibuya", "Shibuya"]
-    for i in range(len(dummy_names)):
-        raids.append({
-            "name": dummy_names[i],
-            "map": dummy_maps[i],
-            "type": "dummy",
-            "next_time": DUMMY_RAID_TIMES[i],
-            "scheduled_time": None,
-            "image": get_image_path(clean_boss_name(dummy_names[i])),
-        })
-
     raids.sort(key=lambda r: r["next_time"])
     return raids
 
@@ -410,6 +360,7 @@ def get_upcoming_raids():
 ###########################################################
 def main():
     global last_cleanup_time
+    last_summary_log = None
     print("🔍 Iniciando Discord Raid Bot...")
     while True:
         now_kst = get_current_kst()  # Always use KST for calculations
@@ -430,20 +381,22 @@ def main():
                 except Exception:
                     continue
             after = len(completed_raids)
-            print(f"[DEBUG] Cleaned up completed_raids: {before} -> {after}")
+            print(f"[CLEANUP] Cleaned up completed_raids: {before} -> {after}")
             last_cleanup_time = now_kst
+
+        # Log a summary of scheduled raids every hour
+        if last_summary_log is None or (now_kst - last_summary_log).total_seconds() >= 3600:
+            summary = [f"{r['name']} at {r['next_time'].strftime('%Y-%m-%d %H:%M:%S %Z')}" for r in upcoming_raids]
+            print(f"[SUMMARY] Scheduled raids: {', '.join(summary)}")
+            last_summary_log = now_kst
 
         for raid in upcoming_raids:
             # All raid["next_time"] are KST-aware
             time_diff = (raid["next_time"] - now_kst).total_seconds()
             key = (raid["name"], raid["next_time"].strftime("%Y-%m-%d %H:%M:%S"))
 
-            # Debug print for each raid
-            print(f"[DEBUG] Raid: {raid['name']} | Scheduled: {raid['next_time'].strftime('%Y-%m-%d %H:%M:%S %Z')} | time_diff: {int(time_diff)}s | AlertSent: {key in sent_messages} | Completed: {key in completed_raids}")
-
             # Alert exactly at or after threshold (10min = 600s)
             if time_diff <= 600 and key not in sent_messages and key not in completed_raids:
-                print(f"[DEBUG] Sending alert for {raid['name']} (time_diff={int(time_diff)}s)")
                 success, message_id, embed = send_webhook_message(raid, time_diff)
                 if success:
                     sent_messages[key] = {
@@ -452,25 +405,20 @@ def main():
                         'last_update': now_kst,
                         'embed': embed
                     }
-                else:
-                    print(f"[DEBUG] Failed to send alert for {raid['name']}")
 
             # Update status every minute
             if key in sent_messages:
                 message_data = sent_messages[key]
                 if (now_kst - message_data['last_update']).total_seconds() >= 60:
-                    print(f"[DEBUG] Updating message for {raid['name']} (time_diff={int(time_diff)}s)")
                     success, status = edit_webhook_message(
                         message_data['message_id'], raid, time_diff,
                         message_data['embed'])
                     if success:
                         sent_messages[key]['last_update'] = now_kst
                         if status == "finished":
-                            print(f"[DEBUG] Raid {raid['name']} finished. Removing from sent_messages and adding to completed_raids.")
+                            print(f"[INFO] Raid {raid['name']} finished. Removing from sent_messages and adding to completed_raids.")
                             del sent_messages[key]
                             completed_raids.add(key)
-                    else:
-                        print(f"[DEBUG] Failed to update message for {raid['name']}")
 
         time.sleep(CHECK_INTERVAL)
 
