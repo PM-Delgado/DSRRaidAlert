@@ -187,10 +187,13 @@ def create_embed_content(raid, time_until_raid_seconds):
     clean_name = clean_boss_name(raid['name'])
     status, color = get_raid_status(time_until_raid_seconds, raid.get("type"))
 
+
     if status in ("upcoming", "starting"):
         desc_status = f"⏳ Falta {minutes_until}min"
     elif status == "ongoing":
-        desc_status = "⚔️ **Raid a decorrer!**"
+        # Calculate minutes since raid started
+        minutes_ongoing = max(0, int((-time_until_raid_seconds) // 60))
+        desc_status = f"⚔️ **Começou há {minutes_ongoing} min**"
     else:
         desc_status = "✅ **Raid finalizada!**"
 
@@ -223,7 +226,8 @@ def update_embed_fields(embed, raid, time_until_raid_seconds):
     if status in ("upcoming", "starting"):
         desc_status = f"⏳ Falta {minutes_until}min"
     elif status == "ongoing":
-        desc_status = "⚔️ **Raid a decorrer!**"
+        minutes_ongoing = max(0, int((-time_until_raid_seconds) // 60))
+        desc_status = f"⚔️ **Começou há {minutes_ongoing} min**"
     else:
         desc_status = "✅ **Raid finalizada!**"
     embed["fields"][-1]["value"] = desc_status
@@ -242,18 +246,21 @@ def send_webhook_message(raid, time_until_raid_seconds):
 
     status, _ = get_raid_status(time_until_raid_seconds, raid.get("type"))
 
+    if status == "ongoing":
+        minutes_ongoing = max(0, int((-time_until_raid_seconds) // 60))
+        ongoing_str = f"Começou há {minutes_ongoing} min"
     if raid.get("type") == "dummy":
         if status in ("upcoming", "starting"):
             content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** começa em {format_minutos_pt(minutes_until)}!"
         elif status == "ongoing":
-            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** está a decorrer!"
+            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** {ongoing_str}!"
         else:
             content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** foi finalizada!"
     else:
         if status in ("upcoming", "starting"):
             content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** começa em {format_minutos_pt(minutes_until)}!"
         elif status == "ongoing":
-            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** está a decorrer!"
+            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** {ongoing_str}!"
         else:
             content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** foi finalizada!"
 
@@ -287,18 +294,21 @@ def edit_webhook_message(message_id, raid, time_until_raid_seconds, embed):
         return False, None
     embed, status = update_embed_fields(embed, raid, time_until_raid_seconds)
     minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
+    if status == "ongoing":
+        minutes_ongoing = max(0, int((-time_until_raid_seconds) // 60))
+        ongoing_str = f"Começou há {minutes_ongoing} min"
     if raid.get("type") == "dummy":
         if status in ("upcoming", "starting"):
             content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** começa em {format_minutos_pt(minutes_until)}!"
         elif status == "ongoing":
-            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** está a decorrer!"
+            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** {ongoing_str}!"
         else:
             content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** foi finalizada!"
     else:
         if status in ("upcoming", "starting"):
             content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** começa em {format_minutos_pt(minutes_until)}!"
         elif status == "ongoing":
-            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** está a decorrer!"
+            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** {ongoing_str}!"
         else:
             content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** foi finalizada!"
 
