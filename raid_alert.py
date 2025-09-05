@@ -364,40 +364,6 @@ REAL_RAIDS = [
     },
 ]
 
-# Raids dummy para teste local (podes ajustar offsets/nomes/maps)
-DUMMY_RAIDS = [
-    {
-        "name": "🎲 Andromon (Dummy)",
-        "map": "Shibuya",
-        "type": "dummy",
-        "times": [2, 4],  # minutos de offset em relação ao SCRIPT_START_TIME
-    },
-    {
-        "name": "🪨 Gotsumon (Dummy)",
-        "map": "Shibuya",
-        "type": "dummy",
-        "times": [3, 5],  # minutos de offset em relação ao SCRIPT_START_TIME
-    }
-]
-
-
-def _build_raid_entry(name: str,
-                      map_name: str,
-                      next_time_dt,
-                      raid_type: str,
-                      scheduled_time: str | None = None):
-    """Cria o dicionário de raid no formato esperado pelo resto do código."""
-    return {
-        "name": name,
-        "map": map_name,
-        "type": raid_type,  # "dummy" ou "real"
-        "next_time": next_time_dt,  # datetime tz-aware (KST)
-        "scheduled_time":
-        scheduled_time,  # string "HH:MM" só para reais (mostrada no embed)
-        "image": get_image_path(clean_boss_name(name)),  # thumbnail do boss
-    }
-
-
 def get_upcoming_raids():
     raids = []
 
@@ -458,8 +424,12 @@ def main():
             time_diff = (raid["next_time"] - now_kst).total_seconds()
             key = (raid["name"], raid["next_time"].strftime("%Y-%m-%d %H:%M:%S"))
 
+            # Debug print for each raid
+            print(f"[DEBUG] Raid: {raid['name']} | Scheduled: {raid['next_time'].strftime('%Y-%m-%d %H:%M:%S %Z')} | time_diff: {int(time_diff)}s | AlertSent: {key in sent_messages}")
+
             # Alert exactly at or after threshold (10min = 600s)
             if time_diff <= 600 and key not in sent_messages:
+                print(f"[DEBUG] Sending alert for {raid['name']} (time_diff={int(time_diff)}s)")
                 success, message_id, embed = send_webhook_message(raid, time_diff)
                 if success:
                     sent_messages[key] = {
@@ -468,18 +438,24 @@ def main():
                         'last_update': now_kst,
                         'embed': embed
                     }
+                else:
+                    print(f"[DEBUG] Failed to send alert for {raid['name']}")
 
             # Update status every minute
             if key in sent_messages:
                 message_data = sent_messages[key]
                 if (now_kst - message_data['last_update']).total_seconds() >= 60:
+                    print(f"[DEBUG] Updating message for {raid['name']} (time_diff={int(time_diff)}s)")
                     success, status = edit_webhook_message(
                         message_data['message_id'], raid, time_diff,
                         message_data['embed'])
                     if success:
                         sent_messages[key]['last_update'] = now_kst
                         if status == "finished":
+                            print(f"[DEBUG] Raid {raid['name']} finished. Removing from sent_messages.")
                             del sent_messages[key]
+                    else:
+                        print(f"[DEBUG] Failed to update message for {raid['name']}")
 
         time.sleep(CHECK_INTERVAL)
 
