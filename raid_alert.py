@@ -42,6 +42,9 @@ BRT = timezone("America/Sao_Paulo")
 SCRIPT_START_TIME = None
 sent_messages = {}
 
+# Dummy raid times (initialized at script start)
+DUMMY_RAID_TIMES = None
+
 # =============================
 # Utilitários
 # =============================
@@ -227,7 +230,7 @@ def send_webhook_message(raid, time_until_raid_seconds):
         return False, None, None
 
     print(f"[DEBUG] send_webhook_message called for {raid['name']} | time_until_raid_seconds: {int(time_until_raid_seconds)}")
-    
+
     embed = create_embed_content(raid, time_until_raid_seconds)
     minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
 
@@ -390,10 +393,11 @@ def get_upcoming_raids():
                 "image": get_image_path(clean_boss_name(name)),
             })
 
-    # Dummy raids for local testing: schedule at 10 and 15 minutes after script start
-    now_kst = get_current_kst()
-    dummy_raid_times = [now_kst + timedelta(minutes=10), now_kst + timedelta(minutes=15)]
-    dummy_raid_times = [KST.localize(dt.replace(tzinfo=None)) if dt.tzinfo is None else dt for dt in dummy_raid_times]
+    global DUMMY_RAID_TIMES
+    if DUMMY_RAID_TIMES is None:
+        now_kst = get_current_kst()
+        DUMMY_RAID_TIMES = [now_kst + timedelta(minutes=10), now_kst + timedelta(minutes=15)]
+        DUMMY_RAID_TIMES = [KST.localize(dt.replace(tzinfo=None)) if dt.tzinfo is None else dt for dt in DUMMY_RAID_TIMES]
     dummy_names = ["🎲 Andromon (Dummy)", "🪨 Gotsumon (Dummy)"]
     dummy_maps = ["Shibuya", "Shibuya"]
     for i in range(len(dummy_names)):
@@ -401,7 +405,7 @@ def get_upcoming_raids():
             "name": dummy_names[i],
             "map": dummy_maps[i],
             "type": "dummy",
-            "next_time": dummy_raid_times[i],
+            "next_time": DUMMY_RAID_TIMES[i],
             "scheduled_time": None,
             "image": get_image_path(clean_boss_name(dummy_names[i])),
         })
