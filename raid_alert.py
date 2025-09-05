@@ -39,11 +39,17 @@ custom_maps = {
 KST = timezone("Asia/Seoul")
 BRT = timezone("America/Sao_Paulo")
 
+
 SCRIPT_START_TIME = None
 sent_messages = {}
-
+# Track finished raids to prevent duplicate alerts
+completed_raids = set()
 # Dummy raid times (initialized at script start)
 DUMMY_RAID_TIMES = None
+
+# For periodic cleanup of completed_raids
+COMPLETED_RAIDS_CLEANUP_INTERVAL = 7 * 24 * 60 * 60  # 7 days in seconds
+last_cleanup_time = None
 
 # =============================
 # Utilitários
@@ -419,11 +425,31 @@ def get_upcoming_raids():
 # =============================
 
 
+
 def main():
+    global last_cleanup_time
     print("🔍 Iniciando Discord Raid Bot...")
     while True:
         now_kst = get_current_kst()  # Always use KST for calculations
         upcoming_raids = get_upcoming_raids()
+
+        # Periodic cleanup of completed_raids (every 7 days)
+        if last_cleanup_time is None or (now_kst - last_cleanup_time).total_seconds() > COMPLETED_RAIDS_CLEANUP_INTERVAL:
+            cutoff = now_kst - timedelta(seconds=COMPLETED_RAIDS_CLEANUP_INTERVAL)
+            before = len(completed_raids)
+            completed_raids_copy = set(completed_raids)
+            for key in completed_raids_copy:
+                # key = (name, time_str)
+                try:
+                    raid_time = datetime.strptime(key[1], "%Y-%m-%d %H:%M:%S")
+                    raid_time = KST.localize(raid_time)
+                    if raid_time < cutoff:
+                        completed_raids.remove(key)
+                except Exception:
+                    continue
+            after = len(completed_raids)
+            print(f"[DEBUG] Cleaned up completed_raids: {before} -> {after}")
+            last_cleanup_time = now_kst
 
         for raid in upcoming_raids:
             # All raid["next_time"] are KST-aware
@@ -431,10 +457,10 @@ def main():
             key = (raid["name"], raid["next_time"].strftime("%Y-%m-%d %H:%M:%S"))
 
             # Debug print for each raid
-            print(f"[DEBUG] Raid: {raid['name']} | Scheduled: {raid['next_time'].strftime('%Y-%m-%d %H:%M:%S %Z')} | time_diff: {int(time_diff)}s | AlertSent: {key in sent_messages}")
+            print(f"[DEBUG] Raid: {raid['name']} | Scheduled: {raid['next_time'].strftime('%Y-%m-%d %H:%M:%S %Z')} | time_diff: {int(time_diff)}s | AlertSent: {key in sent_messages} | Completed: {key in completed_raids}")
 
             # Alert exactly at or after threshold (10min = 600s)
-            if time_diff <= 600 and key not in sent_messages:
+            if time_diff <= 600 and key not in sent_messages and key not in completed_raids:
                 print(f"[DEBUG] Sending alert for {raid['name']} (time_diff={int(time_diff)}s)")
                 success, message_id, embed = send_webhook_message(raid, time_diff)
                 if success:
@@ -458,8 +484,9 @@ def main():
                     if success:
                         sent_messages[key]['last_update'] = now_kst
                         if status == "finished":
-                            print(f"[DEBUG] Raid {raid['name']} finished. Removing from sent_messages.")
+                            print(f"[DEBUG] Raid {raid['name']} finished. Removing from sent_messages and adding to completed_raids.")
                             del sent_messages[key]
+                            completed_raids.add(key)
                     else:
                         print(f"[DEBUG] Failed to update message for {raid['name']}")
 
