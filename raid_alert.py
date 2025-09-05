@@ -295,7 +295,7 @@ def edit_webhook_message(message_id, raid, time_until_raid_seconds, embed):
     minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
     if status == "ongoing":
         minutes_ongoing = max(0, int((-time_until_raid_seconds) // 60))
-        ongoing_str = f"Começou há {minutes_ongoing} min"
+        ongoing_str = f"Começou há {format_minutos_pt(minutes_ongoing)}"
     if raid.get("type") == "dummy":
         if status in ("upcoming", "starting"):
             content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** começa em {format_minutos_pt(minutes_until)}!"
