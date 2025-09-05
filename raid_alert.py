@@ -61,7 +61,7 @@ def get_current_kst():
 def get_next_daily_time(time_str):
     now = get_current_kst()
     raid_time = datetime.strptime(time_str, "%H:%M").time()
-    raid_dt = datetime.combine(now.date(), raid_time, tzinfo=KST)
+    raid_dt = KST.localize(datetime.combine(now.date(), raid_time))
     if raid_dt <= now:
         raid_dt += timedelta(days=1)
     return raid_dt
@@ -69,13 +69,12 @@ def get_next_daily_time(time_str):
 
 def get_next_biweekly_time(time_str, base_date_str):
     now = get_current_kst()
-    base_date = datetime.strptime(base_date_str,
-                                  "%Y-%m-%d").replace(tzinfo=KST)
+    base_date = KST.localize(datetime.strptime(base_date_str, "%Y-%m-%d"))
     raid_time = datetime.strptime(time_str, "%H:%M").time()
     diff_days = (now.date() - base_date.date()).days
     cycles = diff_days // 14
     next_date = base_date + timedelta(days=cycles * 14)
-    raid_dt = datetime.combine(next_date.date(), raid_time, tzinfo=KST)
+    raid_dt = KST.localize(datetime.combine(next_date.date(), raid_time))
     if raid_dt <= now:
         raid_dt += timedelta(days=14)
     return raid_dt
@@ -227,6 +226,8 @@ def send_webhook_message(raid, time_until_raid_seconds):
         print("⚠️ Erro: DISCORD_WEBHOOK não está configurado")
         return False, None, None
 
+    print(f"[DEBUG] send_webhook_message called for {raid['name']} | time_until_raid_seconds: {int(time_until_raid_seconds)}")
+    
     embed = create_embed_content(raid, time_until_raid_seconds)
     minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
 
@@ -392,6 +393,7 @@ def get_upcoming_raids():
     # Dummy raids for local testing: schedule at 10 and 15 minutes after script start
     now_kst = get_current_kst()
     dummy_raid_times = [now_kst + timedelta(minutes=10), now_kst + timedelta(minutes=15)]
+    dummy_raid_times = [KST.localize(dt.replace(tzinfo=None)) if dt.tzinfo is None else dt for dt in dummy_raid_times]
     dummy_names = ["🎲 Andromon (Dummy)", "🪨 Gotsumon (Dummy)"]
     dummy_maps = ["Shibuya", "Shibuya"]
     for i in range(len(dummy_names)):
