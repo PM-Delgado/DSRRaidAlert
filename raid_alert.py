@@ -12,7 +12,7 @@ CHECK_INTERVAL = 5  # loop principal a cada 5s
 TEST_DUMMIES_AS_REAL = True
 BASE_ICON_URL = os.getenv("DSR_RAID_ALERT_ICONS")
 BASE_MAP_URL = os.getenv("DSR_RAID_ALERT_MAPS")
-ROLE_ID = os.getenv("DISCORD_ROLE_ID")  # substitui pelo ID real da role
+ROLE_ID = os.getenv("DISCORD_ROLE_ID")
 ROLE_TAG = f"<@&{ROLE_ID}>"
 
 custom_icons = {
@@ -186,35 +186,19 @@ def create_embed_content(raid, time_until_raid_seconds):
     else:
         desc_status = "✅ **Raid finalizada!**"
 
-    if raid.get("type") == "dummy":
-        horario_str = brt_time.strftime('%H:%M')
-    else:
-        horario_str = raid.get("scheduled_time", brt_time.strftime('%H:%M'))
+    # Always show BRT hour for all raids
+    horario_str = brt_time.strftime('%H:%M')
 
     embed = {
-        "title":
-        f"{clean_name}",
-        "fields": [{
-            "name": "",
-            "value": f"📍 {raid['map']}",
-            "inline": False
-        }, {
-            "name": "",
-            "value": f"⏰ {horario_str}",
-            "inline": False
-        }, {
-            "name": "",
-            "value": f"{desc_status}",
-            "inline": False
-        }],
-        "color":
-        color,
-        "thumbnail": {
-            "url": raid["image"]
-        },
-        "footer": {
-            "text": "DSR Raid Alert | Done by Douleur"
-        },
+        "title": f"{clean_name}",
+        "fields": [
+            {"name": "", "value": f"📍 {raid['map']}", "inline": False},
+            {"name": "", "value": f"⏰ {horario_str}", "inline": False},
+            {"name": "", "value": f"{desc_status}", "inline": False}
+        ],
+        "color": color,
+        "thumbnail": {"url": raid["image"]},
+        "footer": {"text": "DSR Raid Alert | Done by Douleur"},
     }
 
     map_image_url = get_map_image_url(raid['map'], clean_name)
@@ -439,22 +423,20 @@ def get_upcoming_raids():
                 "image": get_image_path(clean_boss_name(name)),
             })
 
-    # Se ainda quiseres manter DUMMY_RAIDS para testes locais
-        for cfg in DUMMY_RAIDS:
-            name = cfg["name"]
-            map_name = cfg["map"]
-            offsets = cfg.get("times", [])
-
-            for offset in offsets:
-                next_time_dt = get_dummy_raid_time(offset)
-                raids.append({
-                    "name": name,
-                    "map": map_name,
-                    "type": "dummy",
-                    "next_time": next_time_dt,
-                    "scheduled_time": None,
-                    "image": get_image_path(clean_boss_name(name)),
-                })
+    # Dummy raids for local testing: schedule at 10 and 15 minutes after script start
+    now_kst = get_current_kst()
+    dummy_raid_times = [now_kst + timedelta(minutes=10), now_kst + timedelta(minutes=15)]
+    dummy_names = ["🎲 Andromon (Dummy)", "🪨 Gotsumon (Dummy)"]
+    dummy_maps = ["Shibuya", "Shibuya"]
+    for i in range(len(dummy_names)):
+        raids.append({
+            "name": dummy_names[i],
+            "map": dummy_maps[i],
+            "type": "dummy",
+            "next_time": dummy_raid_times[i],
+            "scheduled_time": None,
+            "image": get_image_path(clean_boss_name(dummy_names[i])),
+        })
 
     raids.sort(key=lambda r: r["next_time"])
     return raids
@@ -469,36 +451,35 @@ def main():
     print("🔍 Iniciando Discord Raid Bot...")
     alerted = set()
     while True:
-        now = get_current_kst()
+        now_kst = get_current_kst()  # Always use KST for calculations
         upcoming_raids = get_upcoming_raids()
 
         for raid in upcoming_raids:
-            time_diff = (raid["next_time"] - now).total_seconds()
-            key = (raid["name"],
-                   raid["next_time"].strftime("%Y-%m-%d %H:%M:%S"))
+            # All raid["next_time"] are KST-aware
+            time_diff = (raid["next_time"] - now_kst).total_seconds()
+            key = (raid["name"], raid["next_time"].strftime("%Y-%m-%d %H:%M:%S"))
 
-            # 🔹 Alerta inicial (igual para dummy/real, só muda conteúdo em send_webhook_message)
+            # Alert 2 minutes before spawn (120s window)
             if 110 <= time_diff <= 130 and key not in alerted:
-                success, message_id, embed = send_webhook_message(
-                    raid, time_diff)
+                success, message_id, embed = send_webhook_message(raid, time_diff)
                 if success:
                     alerted.add(key)
                     sent_messages[key] = {
                         'message_id': message_id,
                         'raid_time': raid["next_time"],
-                        'last_update': now,
+                        'last_update': now_kst,
                         'embed': embed
                     }
 
-            # 🔹 Atualizações
+            # Update status every minute
             if key in sent_messages:
                 message_data = sent_messages[key]
-                if (now - message_data['last_update']).total_seconds() >= 60:
+                if (now_kst - message_data['last_update']).total_seconds() >= 60:
                     success, status = edit_webhook_message(
                         message_data['message_id'], raid, time_diff,
                         message_data['embed'])
                     if success:
-                        sent_messages[key]['last_update'] = now
+                        sent_messages[key]['last_update'] = now_kst
                         if status == "finished":
                             del sent_messages[key]
 
