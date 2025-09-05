@@ -460,7 +460,7 @@ def main():
             key = (raid["name"], raid["next_time"].strftime("%Y-%m-%d %H:%M:%S"))
 
             # Alert 2 minutes before spawn (120s window)
-            if 110 <= time_diff <= 130 and key not in alerted:
+            if 590 <= time_diff <= 610 and key not in alerted:
                 success, message_id, embed = send_webhook_message(raid, time_diff)
                 if success:
                     alerted.add(key)
