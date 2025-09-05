@@ -300,7 +300,7 @@ def edit_webhook_message(message_id, raid, time_until_raid_seconds, embed):
         if status in ("upcoming", "starting"):
             content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | Começa em {format_minutos_pt(minutes_until)}!"
         elif status == "ongoing":
-            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** {ongoing_str}!"
+            content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | {ongoing_str}!"
         else:
             content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | Raid finalizada!"
     else:
