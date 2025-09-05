@@ -11,7 +11,7 @@ language = "python3"
 requiredFiles = [".replit", "replit.nix"]
 
 [deployment]
-run = ["python3", "main.py"]
+run = ["python3", "raid_alert.py"]
 deploymentTarget = "cloudrun"
 
 [agent]
@@ -35,7 +35,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python main.py"
+args = "python raid_alert.py"
 
 [workflows.workflow.metadata]
 outputType = "console"

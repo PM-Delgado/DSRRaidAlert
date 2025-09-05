@@ -383,7 +383,7 @@ REAL_RAIDS = [
 # Raids dummy para teste local (podes ajustar offsets/nomes/maps)
 DUMMY_RAIDS = [
     {
-        "name": "🎃 Pumpkinmon (Dummy)",
+        "name": "🎲 Andromon (Dummy)",
         "map": "Shibuya",
         "type": "dummy",
         "times": [2, 4],  # minutos de offset em relação ao SCRIPT_START_TIME
