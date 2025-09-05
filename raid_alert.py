@@ -10,9 +10,9 @@ from pytz import timezone
 WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK")
 CHECK_INTERVAL = 5  # loop principal a cada 5s
 TEST_DUMMIES_AS_REAL = True
-BASE_ICON_URL = "https://raw.githubusercontent.com/PM-Delgado/DSRRaidAlert/main/RAlertIcons"
-BASE_MAP_URL = "https://raw.githubusercontent.com/PM-Delgado/DSRRaidAlert/main/RAlertMaps"
-ROLE_ID = "1413334417157521499"  # substitui pelo ID real da role
+BASE_ICON_URL = os.getenv("DSR_RAID_ALERT_ICONS")
+BASE_MAP_URL = os.getenv("DSR_RAID_ALERT_MAPS")
+ROLE_ID = os.getenv("DISCORD_ROLE_ID")  # substitui pelo ID real da role
 ROLE_TAG = f"<@&{ROLE_ID}>"
 
 custom_icons = {
