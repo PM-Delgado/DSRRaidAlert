@@ -66,7 +66,7 @@ REAL_RAIDS = [
     {
         "name": "🪨 Gotsumon",
         "map": "Shibuya",
-        "times": ["23:00", "01:11"], # TODO CHANGE HERE
+        "times": ["23:00", "01:20"], # TODO CHANGE HERE
         "frequency": "daily",
     },
     {
@@ -239,7 +239,7 @@ def create_embed_content(raid, time_until_raid_seconds):
     return embed
 
 # Update only status/color in the existing embed
-def update_embed_fields(embed, raid, time_until_raid_seconds):
+def update_embed_fields(embed, time_until_raid_seconds):
     status, color = get_raid_status(time_until_raid_seconds)
     minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
     embed["color"] = color
@@ -250,7 +250,9 @@ def update_embed_fields(embed, raid, time_until_raid_seconds):
         desc_status = f"⚔️ **Começou há {format_minutos_pt(minutes_ongoing)}**"
     else:
         desc_status = "✅ **Raid finalizada!**"
+    old_value = embed["fields"][-1]["value"]
     embed["fields"][-1]["value"] = desc_status
+    print(f"[DEBUG] update_embed_fields: status={status}, old_value='{old_value}', new_value='{desc_status}'")
     return embed, status
 
 def send_webhook_message(raid, time_until_raid_seconds):
@@ -301,7 +303,7 @@ def edit_webhook_message(message_id, raid, time_until_raid_seconds, embed):
     except Exception:
         print("Error extracting webhook ID and token")
         return False, None
-    embed, status = update_embed_fields(embed, raid, time_until_raid_seconds)
+    embed, status = update_embed_fields(embed, time_until_raid_seconds)
     # Production log: log every embed update
     print(f"[{get_log_time()}] [UPDATE] Updated alert for {raid['name']} scheduled at {raid['next_time'].strftime('%Y-%m-%d %H:%M:%S %Z')} | Status: {status}")
     minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
@@ -316,9 +318,11 @@ def edit_webhook_message(message_id, raid, time_until_raid_seconds, embed):
         content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | Raid finalizada!"
 
     payload = {"content": content, "embeds": [embed]}
+    print(f"[DEBUG] edit_webhook_message: status={status}, payload_embed_field='{embed['fields'][-1]['value']}'")
     edit_url = f"https://discord.com/api/webhooks/{webhook_id}/{webhook_token}/messages/{message_id}"
     try:
         response = requests.patch(edit_url, json=payload)
+        print(f"[DEBUG] Discord PATCH response: {response.status_code}")
         if response.status_code == 200:
             return True, status
         else:
