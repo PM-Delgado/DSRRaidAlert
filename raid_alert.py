@@ -66,7 +66,7 @@ REAL_RAIDS = [
     {
         "name": "🪨 Gotsumon",
         "map": "Shibuya",
-        "times": ["23:00", "01:30"], # TODO CHANGE HERE
+        "times": ["23:00", "01:36"], # TODO CHANGE HERE
         "frequency": "daily",
     },
     {
@@ -409,8 +409,8 @@ def main():
             print("+----------------------+---------------------+----------------------+")
             last_summary_log = now_kst
 
+        # First, send new alerts for upcoming raids
         for raid in upcoming_raids:
-            # All raid["next_time"] are KST-aware
             time_diff = (raid["next_time"] - now_kst).total_seconds()
             key = (raid["name"], raid["next_time"].strftime("%Y-%m-%d %H:%M:%S"))
             print(f"[DEBUG] main loop: raid={raid['name']}, time_diff={time_diff}, key={key}")
@@ -424,28 +424,33 @@ def main():
                         'message_id': message_id,
                         'raid_time': raid["next_time"],
                         'last_update': now_kst,
-                        'embed': embed
+                        'embed': embed,
+                        'raid': raid  # Store the original raid dict
                     }
 
-            # Update status every minute
-            if key in sent_messages:
-                message_data = sent_messages[key]
-                seconds_since_last_update = (now_kst - message_data['last_update']).total_seconds()
-                print(f"[DEBUG] Update check for {raid['name']} (key={key}): seconds_since_last_update={seconds_since_last_update}")
-                if seconds_since_last_update >= 60:
-                    print(f"[DEBUG] Attempting to update alert for {raid['name']} (key={key})")
-                    success, status = edit_webhook_message(
-                        message_data['message_id'], raid, time_diff,
-                        message_data['embed'])
-                    if success:
-                        sent_messages[key]['last_update'] = now_kst
-                        # Only remove from sent_messages after a successful update to 'finished'
-                        if status == "finished":
-                            print(f"[{get_log_time()}] [INFO] Raid {raid['name']} finished. Removing from sent_messages and adding to completed_raids.")
-                            del sent_messages[key]
-                            completed_raids.add(key)
-                else:
-                    print(f"[DEBUG] Not updating {raid['name']} (key={key}) yet; waiting for 60s interval.")
+        # Then, update all sent messages using their original scheduled time
+        for key, message_data in list(sent_messages.items()):
+            raid_name, scheduled_time_str = key
+            # Use the original scheduled time for updates
+            raid = message_data['raid']
+            raid_time = message_data['raid_time']
+            time_diff = (raid_time - now_kst).total_seconds()
+            seconds_since_last_update = (now_kst - message_data['last_update']).total_seconds()
+            print(f"[DEBUG] Update check for {raid_name} (key={key}): seconds_since_last_update={seconds_since_last_update}, time_diff={time_diff}")
+            if seconds_since_last_update >= 60:
+                print(f"[DEBUG] Attempting to update alert for {raid_name} (key={key})")
+                success, status = edit_webhook_message(
+                    message_data['message_id'], raid, time_diff,
+                    message_data['embed'])
+                if success:
+                    sent_messages[key]['last_update'] = now_kst
+                    # Only remove from sent_messages after a successful update to 'finished'
+                    if status == "finished":
+                        print(f"[{get_log_time()}] [INFO] Raid {raid_name} finished. Removing from sent_messages and adding to completed_raids.")
+                        del sent_messages[key]
+                        completed_raids.add(key)
+            else:
+                print(f"[DEBUG] Not updating {raid_name} (key={key}) yet; waiting for 60s interval.")
 
         time.sleep(CHECK_INTERVAL)
 
