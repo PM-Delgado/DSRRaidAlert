@@ -111,9 +111,9 @@ REAL_RAIDS = [
 ###########################################################
 def get_image_path(name: str) -> str:
     if name in custom_icons:
-        return f"{custom_icons[name]}"
+        return f"{custom_icons[name]}?v={int(time.time())}"
     safe_name = name.replace(":", "_")
-    return f"https://media.dsrwiki.com/dsrwiki/digimon/{safe_name}/{safe_name}.webp"
+    return f"https://media.dsrwiki.com/dsrwiki/digimon/{safe_name}/{safe_name}.webp?v={int(time.time())}"
 
 def get_current_kst():
     return datetime.now(KST)
@@ -152,14 +152,14 @@ def clean_boss_name(raw_name: str) -> str:
 def get_map_image_url(map_name, boss_name=None):
     clean_name = clean_boss_name(boss_name) if boss_name else None
     if clean_name and clean_name in custom_maps:
-        return f"{custom_maps[clean_name]}"
+        return f"{custom_maps[clean_name]}?v={int(time.time())}"
     kr_name = map_translation.get(map_name)
     if not kr_name:
         return None
     if kr_name == "???":
-        return f"https://media.dsrwiki.com/dsrwiki/map/ApocalymonArea.webp"
+        return f"https://media.dsrwiki.com/dsrwiki/map/ApocalymonArea.webp?v={int(time.time())}"
     safe_name = "".join(kr_name.split())
-    return f"https://media.dsrwiki.com/dsrwiki/map/{safe_name}.webp"
+    return f"https://media.dsrwiki.com/dsrwiki/map/{safe_name}.webp?v={int(time.time())}"
 
 def get_remaining_minutes(seconds_total: int) -> int:
     if seconds_total <= 0:
@@ -176,19 +176,19 @@ def format_minutos_pt(n: int) -> str:
 ###########################################################
 # Status and colors
 ###########################################################
-def compute_status(time_diff, is_dummy):
+def compute_status(time_diff):
     minutes_until = get_remaining_minutes(int(time_diff))
     if time_diff < -300:
         return "finished"
     elif minutes_until > 5:
         return "upcoming"
-    elif 1 <= minutes_until <= 5:
+    elif 0 < minutes_until <= 5:
         return "starting"
     elif minutes_until == 0 or time_diff >= -300:
         return "ongoing"
 
-def get_raid_status(time_diff, raid_type):
-    status = compute_status(time_diff, raid_type == "dummy")
+def get_raid_status(time_diff):
+    status = compute_status(time_diff)
     color = {
         "upcoming": 0xFF0000,
         "starting": 0xFFFF00,
@@ -207,7 +207,7 @@ def create_embed_content(raid, time_until_raid_seconds):
     brt_time = raid["next_time"].astimezone(BRT)
     minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
     clean_name = clean_boss_name(raid['name'])
-    status, color = get_raid_status(time_until_raid_seconds, raid.get("type"))
+    status, color = get_raid_status(time_until_raid_seconds)
 
     if status in ("upcoming", "starting"):
         desc_status = f"⏳ Em {format_minutos_pt(minutes_until)}"
@@ -240,7 +240,7 @@ def create_embed_content(raid, time_until_raid_seconds):
 
 # Update only status/color in the existing embed
 def update_embed_fields(embed, raid, time_until_raid_seconds):
-    status, color = get_raid_status(time_until_raid_seconds, raid.get("type"))
+    status, color = get_raid_status(time_until_raid_seconds)
     minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
     embed["color"] = color
     if status in ("upcoming", "starting"):
@@ -258,12 +258,12 @@ def send_webhook_message(raid, time_until_raid_seconds):
         print("⚠️ Erro: DISCORD_WEBHOOK não está configurado")
         return False, None, None
     # Production log: log every alert sent
-    print(f"[{get_log_time()}] [ALERT] Sent alert for {raid['name']} scheduled at {raid['next_time'].strftime('%Y-%m-%d %H:%M:%S %Z')} | Status: {get_raid_status(time_until_raid_seconds, raid.get('type'))[0]}")
+    print(f"[{get_log_time()}] [ALERT] Sent alert for {raid['name']} scheduled at {raid['next_time'].strftime('%Y-%m-%d %H:%M:%S %Z')} | Status: {get_raid_status(time_until_raid_seconds)[0]}")
 
     embed = create_embed_content(raid, time_until_raid_seconds)
     minutes_until = get_remaining_minutes(int(time_until_raid_seconds))
 
-    status, _ = get_raid_status(time_until_raid_seconds, raid.get("type"))
+    status, _ = get_raid_status(time_until_raid_seconds)
 
     if status == "ongoing":
         minutes_ongoing = max(0, int((-time_until_raid_seconds) // 60))
@@ -351,7 +351,6 @@ def get_upcoming_raids():
             raids.append({
                 "name": name,
                 "map": map_name,
-                "type": "real",
                 "next_time": next_time_dt,
                 "scheduled_time": t,
                 "image": get_image_path(clean_boss_name(name)),
