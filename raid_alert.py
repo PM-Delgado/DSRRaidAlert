@@ -66,7 +66,7 @@ REAL_RAIDS = [
     {
         "name": "🪨 Gotsumon",
         "map": "Shibuya",
-        "times": ["23:00", "01:24"], # TODO CHANGE HERE
+        "times": ["23:00", "01:30"], # TODO CHANGE HERE
         "frequency": "daily",
     },
     {
@@ -439,6 +439,7 @@ def main():
                         message_data['embed'])
                     if success:
                         sent_messages[key]['last_update'] = now_kst
+                        # Only remove from sent_messages after a successful update to 'finished'
                         if status == "finished":
                             print(f"[{get_log_time()}] [INFO] Raid {raid['name']} finished. Removing from sent_messages and adding to completed_raids.")
                             del sent_messages[key]
