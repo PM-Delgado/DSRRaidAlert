@@ -66,7 +66,7 @@ REAL_RAIDS = [
     {
         "name": "🪨 Gotsumon",
         "map": "Shibuya",
-        "times": ["23:00", "01:07"], # TODO CHANGE HERE
+        "times": ["23:00", "01:11"], # TODO CHANGE HERE
         "frequency": "daily",
     },
     {
@@ -184,7 +184,7 @@ def compute_status(time_diff):
         return "upcoming"
     elif 1 <= minutes_until <= 5:
         return "starting"
-    elif minutes_until <= 0 or time_diff >= -300:
+    elif minutes_until == 0 or (time_diff < 0 and time_diff >= -300):
         return "ongoing"
 
 def get_raid_status(time_diff):
