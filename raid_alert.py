@@ -111,9 +111,9 @@ REAL_RAIDS = [
 ###########################################################
 def get_image_path(name: str) -> str:
     if name in custom_icons:
-        return f"{custom_icons[name]}?v={int(time.time())}"
+        return f"{custom_icons[name]}"
     safe_name = name.replace(":", "_")
-    return f"https://media.dsrwiki.com/dsrwiki/digimon/{safe_name}/{safe_name}.webp?v={int(time.time())}"
+    return f"https://media.dsrwiki.com/dsrwiki/digimon/{safe_name}/{safe_name}.webp"
 
 def get_current_kst():
     return datetime.now(KST)
@@ -152,14 +152,14 @@ def clean_boss_name(raw_name: str) -> str:
 def get_map_image_url(map_name, boss_name=None):
     clean_name = clean_boss_name(boss_name) if boss_name else None
     if clean_name and clean_name in custom_maps:
-        return f"{custom_maps[clean_name]}?v={int(time.time())}"
+        return f"{custom_maps[clean_name]}"
     kr_name = map_translation.get(map_name)
     if not kr_name:
         return None
     if kr_name == "???":
-        return f"https://media.dsrwiki.com/dsrwiki/map/ApocalymonArea.webp?v={int(time.time())}"
+        return f"https://media.dsrwiki.com/dsrwiki/map/ApocalymonArea.webp"
     safe_name = "".join(kr_name.split())
-    return f"https://media.dsrwiki.com/dsrwiki/map/{safe_name}.webp?v={int(time.time())}"
+    return f"https://media.dsrwiki.com/dsrwiki/map/{safe_name}.webp"
 
 def get_remaining_minutes(seconds_total: int) -> int:
     if seconds_total <= 0:
@@ -367,6 +367,11 @@ def main():
     global last_cleanup_time
     last_summary_log = None
     print(f"[{get_log_time()}] Starting DSRRaidAlert...")
+    # Log relevant environment variables at startup
+    print("[ENV] DISCORD_WEBHOOK:", WEBHOOK_URL)
+    print("[ENV] DSR_RAID_ALERT_ICONS:", BASE_ICON_URL)
+    print("[ENV] DSR_RAID_ALERT_MAPS:", BASE_MAP_URL)
+    print("[ENV] DISCORD_ROLE_ID:", ROLE_ID)
     while True:
         now_kst = get_current_kst()  # Always use KST for calculations
         upcoming_raids = get_upcoming_raids()
