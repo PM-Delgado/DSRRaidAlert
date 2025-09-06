@@ -11,7 +11,7 @@ WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK")
 CHECK_INTERVAL = 5  # main loop interval in seconds
 BASE_ICON_URL = os.getenv("DSR_RAID_ALERT_ICONS")
 BASE_MAP_URL = os.getenv("DSR_RAID_ALERT_MAPS")
-ROLE_ID = os.getenv("DISCORD_ROLE_ID")
+ROLE_ID = 2#os.getenv("DISCORD_ROLE_ID")
 ROLE_TAG = f"<@&{ROLE_ID}>"
 # Timezones
 KST = timezone("Asia/Seoul")
@@ -66,7 +66,7 @@ REAL_RAIDS = [
     {
         "name": "🪨 Gotsumon",
         "map": "Shibuya",
-        "times": ["23:00", "01:20"], # TODO CHANGE HERE
+        "times": ["23:00", "01:24"], # TODO CHANGE HERE
         "frequency": "daily",
     },
     {
@@ -413,9 +413,11 @@ def main():
             # All raid["next_time"] are KST-aware
             time_diff = (raid["next_time"] - now_kst).total_seconds()
             key = (raid["name"], raid["next_time"].strftime("%Y-%m-%d %H:%M:%S"))
+            print(f"[DEBUG] main loop: raid={raid['name']}, time_diff={time_diff}, key={key}")
 
             # Alert exactly at or after threshold (10min = 600s)
             if time_diff <= 600 and key not in sent_messages and key not in completed_raids:
+                print(f"[DEBUG] Sending initial alert for {raid['name']} (key={key})")
                 success, message_id, embed = send_webhook_message(raid, time_diff)
                 if success:
                     sent_messages[key] = {
@@ -428,7 +430,10 @@ def main():
             # Update status every minute
             if key in sent_messages:
                 message_data = sent_messages[key]
-                if (now_kst - message_data['last_update']).total_seconds() >= 60:
+                seconds_since_last_update = (now_kst - message_data['last_update']).total_seconds()
+                print(f"[DEBUG] Update check for {raid['name']} (key={key}): seconds_since_last_update={seconds_since_last_update}")
+                if seconds_since_last_update >= 60:
+                    print(f"[DEBUG] Attempting to update alert for {raid['name']} (key={key})")
                     success, status = edit_webhook_message(
                         message_data['message_id'], raid, time_diff,
                         message_data['embed'])
@@ -438,6 +443,8 @@ def main():
                             print(f"[{get_log_time()}] [INFO] Raid {raid['name']} finished. Removing from sent_messages and adding to completed_raids.")
                             del sent_messages[key]
                             completed_raids.add(key)
+                else:
+                    print(f"[DEBUG] Not updating {raid['name']} (key={key}) yet; waiting for 60s interval.")
 
         time.sleep(CHECK_INTERVAL)
 
