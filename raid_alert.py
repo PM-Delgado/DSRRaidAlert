@@ -11,7 +11,7 @@ WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK")
 CHECK_INTERVAL = 5  # main loop interval in seconds
 BASE_ICON_URL = os.getenv("DSR_RAID_ALERT_ICONS")
 BASE_MAP_URL = os.getenv("DSR_RAID_ALERT_MAPS")
-ROLE_ID = 2#os.getenv("DISCORD_ROLE_ID")
+ROLE_ID = os.getenv("DISCORD_ROLE_ID")
 ROLE_TAG = f"<@&{ROLE_ID}>"
 # Timezones
 KST = timezone("Asia/Seoul")
@@ -66,7 +66,7 @@ REAL_RAIDS = [
     {
         "name": "🪨 Gotsumon",
         "map": "Shibuya",
-        "times": ["23:00", "01:36"], # TODO CHANGE HERE
+        "times": ["23:00", "01:00"],
         "frequency": "daily",
     },
     {
@@ -250,9 +250,7 @@ def update_embed_fields(embed, time_until_raid_seconds):
         desc_status = f"⚔️ **Começou há {format_minutos_pt(minutes_ongoing)}**"
     else:
         desc_status = "✅ **Raid finalizada!**"
-    old_value = embed["fields"][-1]["value"]
     embed["fields"][-1]["value"] = desc_status
-    print(f"[DEBUG] update_embed_fields: status={status}, old_value='{old_value}', new_value='{desc_status}'")
     return embed, status
 
 def send_webhook_message(raid, time_until_raid_seconds):
@@ -318,7 +316,7 @@ def edit_webhook_message(message_id, raid, time_until_raid_seconds, embed):
         content = f"||{ROLE_TAG}||\n**{raid['name'].upper()}** | Raid finalizada!"
 
     payload = {"content": content, "embeds": [embed]}
-    print(f"[DEBUG] edit_webhook_message: status={status}, payload_embed_field='{embed['fields'][-1]['value']}'")
+    
     edit_url = f"https://discord.com/api/webhooks/{webhook_id}/{webhook_token}/messages/{message_id}"
     try:
         response = requests.patch(edit_url, json=payload)
@@ -413,11 +411,9 @@ def main():
         for raid in upcoming_raids:
             time_diff = (raid["next_time"] - now_kst).total_seconds()
             key = (raid["name"], raid["next_time"].strftime("%Y-%m-%d %H:%M:%S"))
-            print(f"[DEBUG] main loop: raid={raid['name']}, time_diff={time_diff}, key={key}")
 
             # Alert exactly at or after threshold (10min = 600s)
             if time_diff <= 600 and key not in sent_messages and key not in completed_raids:
-                print(f"[DEBUG] Sending initial alert for {raid['name']} (key={key})")
                 success, message_id, embed = send_webhook_message(raid, time_diff)
                 if success:
                     sent_messages[key] = {
@@ -436,9 +432,7 @@ def main():
             raid_time = message_data['raid_time']
             time_diff = (raid_time - now_kst).total_seconds()
             seconds_since_last_update = (now_kst - message_data['last_update']).total_seconds()
-            print(f"[DEBUG] Update check for {raid_name} (key={key}): seconds_since_last_update={seconds_since_last_update}, time_diff={time_diff}")
             if seconds_since_last_update >= 60:
-                print(f"[DEBUG] Attempting to update alert for {raid_name} (key={key})")
                 success, status = edit_webhook_message(
                     message_data['message_id'], raid, time_diff,
                     message_data['embed'])
@@ -449,8 +443,6 @@ def main():
                         print(f"[{get_log_time()}] [INFO] Raid {raid_name} finished. Removing from sent_messages and adding to completed_raids.")
                         del sent_messages[key]
                         completed_raids.add(key)
-            else:
-                print(f"[DEBUG] Not updating {raid_name} (key={key}) yet; waiting for 60s interval.")
 
         time.sleep(CHECK_INTERVAL)
 
