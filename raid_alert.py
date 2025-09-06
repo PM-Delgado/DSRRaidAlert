@@ -66,7 +66,7 @@ REAL_RAIDS = [
     {
         "name": "🪨 Gotsumon",
         "map": "Shibuya",
-        "times": ["23:00", "01:00"],
+        "times": ["23:00", "01:05"], # TODO CHANGE HERE
         "frequency": "daily",
     },
     {
@@ -182,7 +182,7 @@ def compute_status(time_diff):
         return "finished"
     elif minutes_until > 5:
         return "upcoming"
-    elif 0 < minutes_until <= 5:
+    elif 1 <= minutes_until <= 5:
         return "starting"
     elif minutes_until == 0 or time_diff >= -300:
         return "ongoing"
