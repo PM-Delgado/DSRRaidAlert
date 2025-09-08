@@ -100,7 +100,7 @@ REAL_RAIDS = [
     {
         "name": "🎲 Andromon",
         "map": "Gear Savannah",
-        "times": ["00:00"],
+        "times": ["19:00"],
         "frequency": "daily",
         "base_date": "2025-08-28",
     },
@@ -141,6 +141,29 @@ def get_next_biweekly_time(time_str, base_date_str):
     if raid_dt <= now:
         raid_dt += timedelta(days=14)
     return raid_dt
+
+def get_next_rotation_time(base_time_str, base_date_str):
+    """
+    Returns the next raid time for Andromon, rotating 25 minutes later each day since base_date.
+    """
+    now = get_current_kst()
+    base_date = KST.localize(datetime.strptime(base_date_str, "%Y-%m-%d"))
+    base_hour, base_minute = map(int, base_time_str.split(":"))
+    # Calculate days since base_date
+    now_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    base_midnight = base_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    diff_days = (now_midnight - base_midnight).days
+    # Calculate today's raid time
+    raid_time = base_date + timedelta(days=diff_days)
+    raid_time = raid_time.replace(hour=base_hour, minute=base_minute)
+    raid_time += timedelta(minutes=diff_days * 25)
+    if raid_time <= now:
+        # Move to next day
+        diff_days += 1
+        raid_time = base_date + timedelta(days=diff_days)
+        raid_time = raid_time.replace(hour=base_hour, minute=base_minute)
+        raid_time += timedelta(minutes=diff_days * 25)
+    return raid_time
 
 def clean_boss_name(raw_name: str) -> str:
     clean = (raw_name.replace('🎃 ', '').replace('😈 ', '').replace(
@@ -345,6 +368,19 @@ def get_upcoming_raids():
         freq = cfg.get("frequency", "daily")
         times = cfg.get("times", [])
         base_date = cfg.get("base_date")
+        # Special case for Andromon (rotation raid)
+        if name == "🎲 Andromon":
+            # Use base_time and base_date for rotation
+            base_time = times[0]
+            next_time_dt = get_next_rotation_time(base_time, base_date)
+            raids.append({
+                "name": name,
+                "map": map_name,
+                "next_time": next_time_dt,
+                "scheduled_time": base_time,
+                "image": get_image_path(clean_boss_name(name)),
+            })
+            continue
         for t in times:
             if freq == "biweekly":
                 next_time_dt = get_next_biweekly_time(t, base_date)
