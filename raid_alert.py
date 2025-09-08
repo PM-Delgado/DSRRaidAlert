@@ -100,7 +100,7 @@ REAL_RAIDS = [
     {
         "name": "🎲 Andromon",
         "map": "Gear Savannah",
-        "times": ["19:00"],
+        "times": ["00:00"],
         "frequency": "daily",
         "base_date": "2025-08-28",
     },
