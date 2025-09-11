@@ -33,7 +33,7 @@ custom_icons = {
     "Ophanimon: Falldown Mode": f"{BASE_ICON_URL}/Ophanimon.png",
     "Megidramon": f"{BASE_ICON_URL}/Megidramon.png",
     "Omnimon": f"{BASE_ICON_URL}/Omnimon.png",
-    "Andromon": f"{BASE_ICON_URL}/Andromon.png"
+    "Superstarmon": f"{BASE_ICON_URL}/Superstarmon.png"
 }
 
 custom_maps = {
@@ -43,7 +43,7 @@ custom_maps = {
     "Ophanimon: Falldown Mode": f"{BASE_MAP_URL}/Ophanimon_map.jpg",
     "Megidramon": f"{BASE_MAP_URL}/Megidramon_map.jpg",
     "Omnimon": f"{BASE_MAP_URL}/Omnimon_map.jpg",
-    "Andromon": f"{BASE_MAP_URL}/Andromon_map.jpg"
+    "Superstarmon": f"{BASE_MAP_URL}/Superstarmon_map.jpg"
 }
 
 # Map translation EN->KR
@@ -53,7 +53,8 @@ map_translation = {
     "Campground": "캠핑장",
     "Subway Station": "지하철 역",
     "???": "???",
-    "Gear Savannah": "기어 사바나"
+    "Gear Savannah": "기어 사바나",
+    "Infinity Mountain": "무한산"
 }
 
 REAL_RAIDS = [
@@ -98,11 +99,11 @@ REAL_RAIDS = [
         "base_date": "2025-06-01",
     },
     {
-        "name": "🎲 Andromon",
-        "map": "Gear Savannah",
+        "name": "⭐ Superstarmon",
+        "map": "Infinity Mountain",
         "times": ["19:00"],
         "frequency": "daily",
-        "base_date": "2025-08-28",
+        "base_date": "2025-09-11",
     },
 ]
 
@@ -369,7 +370,7 @@ def get_upcoming_raids():
         times = cfg.get("times", [])
         base_date = cfg.get("base_date")
         # Special case for Andromon (rotation raid)
-        if name == "🎲 Andromon":
+        if name == "⭐ Superstarmon":
             # Use base_time and base_date for rotation
             base_time = times[0]
             next_time_dt = get_next_rotation_time(base_time, base_date)
