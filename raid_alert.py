@@ -169,7 +169,7 @@ def get_next_rotation_time(base_time_str, base_date_str):
 def clean_boss_name(raw_name: str) -> str:
     clean = (raw_name.replace('🎃 ', '').replace('😈 ', '').replace(
         '👹 ', '').replace('🤖 ',
-                          '').replace('🎲 ', '').replace('🪨 ', '').replace(
+                          '').replace('⭐ ', '').replace('🪨 ', '').replace(
                               '🪽 ', '').replace('(Dummy)', '').strip())
     return clean
 
