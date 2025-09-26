@@ -33,7 +33,7 @@ custom_icons = {
     "Ophanimon: Falldown Mode": f"{BASE_ICON_URL}/Ophanimon.png",
     "Megidramon": f"{BASE_ICON_URL}/Megidramon.png",
     "Omnimon": f"{BASE_ICON_URL}/Omnimon.png",
-    "Superstarmon": f"{BASE_ICON_URL}/Superstarmon.png"
+    "Rapidmon": f"{BASE_ICON_URL}/Rapidmon.png"
 }
 
 custom_maps = {
@@ -43,7 +43,7 @@ custom_maps = {
     "Ophanimon: Falldown Mode": f"{BASE_MAP_URL}/Ophanimon_map.jpg",
     "Megidramon": f"{BASE_MAP_URL}/Megidramon_map.jpg",
     "Omnimon": f"{BASE_MAP_URL}/Omnimon_map.jpg",
-    "Superstarmon": f"{BASE_MAP_URL}/Superstarmon_map.jpg"
+    "Rapidmon": f"{BASE_MAP_URL}/Rapidmon_map.jpg"
 }
 
 # Map translation EN->KR
@@ -99,11 +99,11 @@ REAL_RAIDS = [
         "base_date": "2025-06-01",
     },
     {
-        "name": "⭐ Superstarmon",
-        "map": "Infinity Mountain",
+        "name": "🦾 Rapidmon",
+        "map": "Valley of Darkness",
         "times": ["19:00"],
         "frequency": "daily",
-        "base_date": "2025-09-11",
+        "base_date": "2025-09-25",
     },
 ]
 
@@ -370,7 +370,7 @@ def get_upcoming_raids():
         times = cfg.get("times", [])
         base_date = cfg.get("base_date")
         # Special case for Andromon (rotation raid)
-        if name == "⭐ Superstarmon":
+        if name == "🦾 Rapidmon":
             # Use base_time and base_date for rotation
             base_time = times[0]
             next_time_dt = get_next_rotation_time(base_time, base_date)
