@@ -166,10 +166,11 @@ def get_next_rotation_time(base_time_str, base_date_str):
         raid_time += timedelta(minutes=diff_days * 25)
     return raid_time
 
+# TODO: ALWAYS CHANGE HERE
 def clean_boss_name(raw_name: str) -> str:
     clean = (raw_name.replace('🎃 ', '').replace('😈 ', '').replace(
         '👹 ', '').replace('🤖 ',
-                          '').replace('⭐ ', '').replace('🪨 ', '').replace(
+                          '').replace('🦾 ', '').replace('🪨 ', '').replace(
                               '🪽 ', '').replace('(Dummy)', '').strip())
     return clean
 
